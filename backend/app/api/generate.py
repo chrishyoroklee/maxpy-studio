@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+MAX_RETRIES = 2  # retry up to 2 times on sandbox failure
+
 
 class Message(BaseModel):
     role: Literal["user", "assistant"]
@@ -38,8 +40,8 @@ async def generate(
 ):
     """Generate an M4L plugin from a natural language prompt.
 
-    Streams the LLM response via SSE, then extracts code, executes it,
-    and returns the generation ID for download.
+    Streams the LLM response via SSE, then extracts code, executes it.
+    If execution fails, sends the error back to the LLM for auto-retry.
     """
     generation_id = str(uuid.uuid4())
     messages = [m.model_dump() for m in req.messages] + [
@@ -47,43 +49,72 @@ async def generate(
     ]
 
     async def event_stream():
+        nonlocal messages, generation_id
         full_response = ""
         code = None
 
-        # Stream LLM response
-        try:
-            async for chunk in generate_code(messages, x_api_key, req.model):
-                full_response += chunk
-                yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
-        except Exception as e:
-            logger.error("LLM error: %s", e)
-            _save(generation_id, req, full_response, None, "error", "LLM request failed")
-            yield f"data: {json.dumps({'type': 'error', 'content': 'LLM request failed. Check your API key and model.'})}\n\n"
-            return
+        for attempt in range(1 + MAX_RETRIES):
+            full_response = ""
 
-        # Extract code from response
-        try:
-            code = extract_code(full_response)
-            yield f"data: {json.dumps({'type': 'code_extracted', 'content': code})}\n\n"
-        except ExtractionError as e:
-            _save(generation_id, req, full_response, None, "error", str(e))
-            yield f"data: {json.dumps({'type': 'error', 'content': f'Code extraction failed: {str(e)}'})}\n\n"
-            return
+            if attempt > 0:
+                yield f"data: {json.dumps({'type': 'status', 'content': f'Retrying (attempt {attempt + 1})...'})}\n\n"
 
-        # Execute in sandbox — pass the same generation_id so download URL matches
-        try:
-            yield f"data: {json.dumps({'type': 'status', 'content': 'Executing code...'})}\n\n"
-            result = execute(code, generation_id=generation_id)
-            _save(generation_id, req, full_response, code, "success",
-                  amxd_path=str(result.files.get("amxd", "")))
-            yield f"data: {json.dumps({'type': 'success', 'generation_id': generation_id, 'stdout': result.stdout})}\n\n"
-        except SandboxError as e:
-            logger.error("Sandbox error: %s", e)
-            _save(generation_id, req, full_response, code, "error", str(e))
-            yield f"data: {json.dumps({'type': 'error', 'content': f'Execution failed: {str(e)}'})}\n\n"
-            return
+            # Stream LLM response
+            try:
+                async for chunk in generate_code(messages, x_api_key, req.model):
+                    full_response += chunk
+                    yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
+            except Exception as e:
+                logger.error("LLM error: %s", e)
+                _save(generation_id, req, full_response, None, "error", "LLM request failed")
+                yield f"data: {json.dumps({'type': 'error', 'content': 'LLM request failed. Check your API key and model.'})}\n\n"
+                return
 
-        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            # Extract code from response
+            try:
+                code = extract_code(full_response)
+                yield f"data: {json.dumps({'type': 'code_extracted', 'content': code})}\n\n"
+            except ExtractionError as e:
+                _save(generation_id, req, full_response, None, "error", str(e))
+                yield f"data: {json.dumps({'type': 'error', 'content': f'Code extraction failed: {str(e)}'})}\n\n"
+                return
+
+            # Execute in sandbox
+            try:
+                yield f"data: {json.dumps({'type': 'status', 'content': 'Executing code...'})}\n\n"
+                result = execute(code, generation_id=generation_id)
+                _save(generation_id, req, full_response, code, "success",
+                      amxd_path=str(result.files.get("amxd", "")))
+                yield f"data: {json.dumps({'type': 'success', 'generation_id': generation_id, 'stdout': result.stdout})}\n\n"
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                return  # success — stop retrying
+
+            except SandboxError as e:
+                error_msg = str(e)
+                logger.warning("Sandbox error (attempt %d): %s", attempt + 1, error_msg)
+
+                if attempt < MAX_RETRIES:
+                    # Feed the error back to the LLM for auto-fix
+                    messages = messages + [
+                        {"role": "assistant", "content": full_response},
+                        {"role": "user", "content": (
+                            f"The code failed with this error:\n\n```\n{error_msg}\n```\n\n"
+                            "Please fix the code. Common causes:\n"
+                            "- IndexError on .ins[N] or .outs[N] means the object has fewer inlets/outlets than expected. "
+                            "The object might not be recognized by maxpylang (gives 0 inlets). Use place_raw() for unknown objects.\n"
+                            "- Use simple, well-known objects: lores~, *~, +~, -~, clip~, cycle~, noise~\n"
+                            "- Avoid biquad~, filtercoeff~, and other complex objects that may not be in maxpylang's database.\n"
+                            "Return the complete fixed script in a ```python code fence."
+                        )},
+                    ]
+                    # Generate a new generation_id for the retry output directory
+                    generation_id = str(uuid.uuid4())
+                    yield f"data: {json.dumps({'type': 'status', 'content': f'Code failed: {error_msg[:200]}. Asking LLM to fix it...'})}\n\n"
+                else:
+                    # Final attempt failed
+                    _save(generation_id, req, full_response, code, "error", error_msg)
+                    yield f"data: {json.dumps({'type': 'error', 'content': f'Execution failed after {MAX_RETRIES + 1} attempts: {error_msg}'})}\n\n"
+                    return
 
     return StreamingResponse(
         event_stream(),
