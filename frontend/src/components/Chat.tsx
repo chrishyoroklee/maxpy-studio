@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { getDownloadUrl } from "../api/client";
 import type { ChatMessage } from "../hooks/useChat";
 
 interface Props {
@@ -7,6 +6,19 @@ interface Props {
   isLoading: boolean;
   onSend: (prompt: string) => void;
   apiKeySet: boolean;
+}
+
+function downloadAmxd(b64: string, filename: string) {
+  const bytes = atob(b64);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  const blob = new Blob([arr], { type: "application/octet-stream" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export function Chat({ messages, isLoading, onSend, apiKeySet }: Props) {
@@ -58,14 +70,13 @@ export function Chat({ messages, isLoading, onSend, apiKeySet }: Props) {
               {msg.error && (
                 <div className="message-error">{msg.error}</div>
               )}
-              {msg.generationId && (
-                <a
-                  href={getDownloadUrl(msg.generationId)}
+              {msg.amxdB64 && (
+                <button
                   className="download-button"
-                  download
+                  onClick={() => downloadAmxd(msg.amxdB64!, "device.amxd")}
                 >
                   Download .amxd
-                </a>
+                </button>
               )}
             </div>
           </div>

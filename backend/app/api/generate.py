@@ -1,5 +1,6 @@
 """POST /api/generate — main endpoint for plugin generation."""
 
+import base64
 import json
 import logging
 import uuid
@@ -85,7 +86,12 @@ async def generate(
                 result = execute(code, generation_id=generation_id)
                 _save(generation_id, req, full_response, code, "success",
                       amxd_path=str(result.files.get("amxd", "")))
-                yield f"data: {json.dumps({'type': 'success', 'generation_id': generation_id, 'stdout': result.stdout})}\n\n"
+                # Encode .amxd as base64 so frontend can download without a second request
+                amxd_b64 = ""
+                amxd_file = result.files.get("amxd")
+                if amxd_file and amxd_file.exists():
+                    amxd_b64 = base64.b64encode(amxd_file.read_bytes()).decode("ascii")
+                yield f"data: {json.dumps({'type': 'success', 'generation_id': generation_id, 'stdout': result.stdout, 'amxd_b64': amxd_b64})}\n\n"
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
                 return  # success — stop retrying
 

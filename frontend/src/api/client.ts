@@ -5,6 +5,7 @@ export interface GenerateEvent {
   content?: string;
   generation_id?: string;
   stdout?: string;
+  amxd_b64?: string;
 }
 
 export async function* streamGenerate(

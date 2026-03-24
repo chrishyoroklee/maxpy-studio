@@ -7,6 +7,7 @@ export interface ChatMessage {
   content: string;
   code?: string;
   generationId?: string;
+  amxdB64?: string;
   error?: string;
 }
 
@@ -64,7 +65,7 @@ export function useChat() {
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === assistantId
-                    ? { ...m, generationId: event.generation_id }
+                    ? { ...m, generationId: event.generation_id, amxdB64: event.amxd_b64 }
                     : m
                 )
               );
