@@ -2,20 +2,35 @@
 
 import re
 
-# Imports that should never appear in generated code
+# Imports and patterns that should never appear in generated code
 DANGEROUS_PATTERNS = [
     r"\bos\.system\b",
+    r"\bos\.popen\b",
+    r"\bos\.exec",
+    r"\bos\.spawn",
+    r"\bos\.remove\b",
+    r"\bos\.unlink\b",
+    r"\bos\.rmdir\b",
     r"\bsubprocess\b",
     r"\bshutil\b",
     r"\b__import__\b",
     r"\beval\s*\(",
     r"\bexec\s*\(",
+    r"\bcompile\s*\(",
+    r"\bgetattr\s*\(",
     r"\bimport\s+os\b",
+    r"\bfrom\s+os\b",
     r"\bimport\s+sys\b",
     r"\bimport\s+socket\b",
     r"\bimport\s+http\b",
     r"\bimport\s+urllib\b",
     r"\bimport\s+requests\b",
+    r"\bimport\s+pathlib\b",
+    r"\bimport\s+glob\b",
+    r"\bimport\s+shlex\b",
+    r"\bimport\s+ctypes\b",
+    r"\bimport\s+pickle\b",
+    r"\bopen\s*\([^)]*['\"]/(etc|proc|sys|dev)",  # block filesystem traversal
 ]
 
 

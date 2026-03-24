@@ -4,12 +4,18 @@ MVP: subprocess with timeout (local dev).
 Production: Docker container with no network (Phase 3).
 """
 
+import os
+import re
+import shutil
 import subprocess
-import tempfile
+import sys
 import uuid
 from pathlib import Path
 
 from app.config import settings
+
+# Path to amxd.py helper (shipped with the project)
+AMXD_MODULE = Path(__file__).parent.parent.parent / "sandbox" / "amxd.py"
 
 
 class SandboxError(Exception):
@@ -42,30 +48,45 @@ def execute(code: str, timeout: int = 30) -> SandboxResult:
     output_dir = settings.output_path / generation_id
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Copy amxd.py into the output dir so `from amxd import save_amxd` works
+    if AMXD_MODULE.exists():
+        shutil.copy2(AMXD_MODULE, output_dir / "amxd.py")
+
     # Rewrite save paths in the code to point to our output directory
-    # Replace any save("...") path with our output directory
     code = _rewrite_save_paths(code, output_dir)
 
     # Write code to a temp file
     code_file = output_dir / "generate.py"
     code_file.write_text(code)
 
+    # Use the same Python interpreter that's running the server
+    # (ensures maxpylang is importable)
+    python_exec = sys.executable
+
     try:
         result = subprocess.run(
-            ["python3", str(code_file)],
+            [python_exec, str(code_file)],
             capture_output=True,
             text=True,
             timeout=timeout,
             cwd=str(output_dir),
+            env={
+                **os.environ,
+                "PYTHONDONTWRITEBYTECODE": "1",
+            },
         )
     except subprocess.TimeoutExpired:
         raise SandboxError(f"Code execution timed out after {timeout}s")
     except FileNotFoundError:
-        raise SandboxError("Python3 not found. Is it installed?")
+        raise SandboxError(f"Python not found at {python_exec}")
 
     if result.returncode != 0:
+        # Truncate long error messages
+        stderr = result.stderr
+        if len(stderr) > 2000:
+            stderr = stderr[:2000] + "\n... (truncated)"
         raise SandboxError(
-            f"Code execution failed (exit {result.returncode}):\n{result.stderr}"
+            f"Code execution failed (exit {result.returncode}):\n{stderr}"
         )
 
     # Collect output files
@@ -78,8 +99,8 @@ def execute(code: str, timeout: int = 30) -> SandboxResult:
 
     if "amxd" not in files:
         raise SandboxError(
-            "Code executed but no .amxd file was generated.\n"
-            f"stdout: {result.stdout}\nstderr: {result.stderr}"
+            "Code executed successfully but no .amxd file was generated.\n"
+            f"stdout: {result.stdout}\nFiles in output: {list(output_dir.iterdir())}"
         )
 
     return SandboxResult(
@@ -91,31 +112,27 @@ def execute(code: str, timeout: int = 30) -> SandboxResult:
 
 
 def _rewrite_save_paths(code: str, output_dir: Path) -> str:
-    """Rewrite file paths in save() calls to use the output directory.
+    """Rewrite file paths in save() and save_amxd() calls to use the output directory."""
+    out = str(output_dir).replace("\\", "/")  # normalize for all platforms
 
-    Replaces paths like 'examples/m4l_chorus.maxpat' with '{output_dir}/device.maxpat'.
-    Also handles save_amxd() calls.
-    """
-    import re
-
-    # Replace patch.save("anything.maxpat") → patch.save("{output_dir}/device.maxpat")
+    # patch.save("anything.maxpat" ...) → patch.save("{out}/device.maxpat" ...)
     code = re.sub(
-        r'\.save\(["\']([^"\']*\.maxpat)["\']',
-        f'.save("{output_dir}/device.maxpat"',
+        r"""\.save\(\s*(['"])([^'"]*\.maxpat)\1""",
+        f'.save("{out}/device.maxpat"',
         code,
     )
 
-    # Replace patch.save("anything.amxd", ...) → patch.save("{output_dir}/device.amxd", ...)
+    # patch.save("anything.amxd" ...) → patch.save("{out}/device.amxd" ...)
     code = re.sub(
-        r'\.save\(["\']([^"\']*\.amxd)["\']',
-        f'.save("{output_dir}/device.amxd"',
+        r"""\.save\(\s*(['"])([^'"]*\.amxd)\1""",
+        f'.save("{out}/device.amxd"',
         code,
     )
 
-    # Replace save_amxd(..., "anything.amxd", ...) → save_amxd(..., "{output_dir}/device.amxd", ...)
+    # save_amxd(..., "anything.amxd" ...) → save_amxd(..., "{out}/device.amxd" ...)
     code = re.sub(
-        r'save_amxd\(([^,]+),\s*["\']([^"\']*\.amxd)["\']',
-        f'save_amxd(\\1, "{output_dir}/device.amxd"',
+        r"""save_amxd\(([^,]+),\s*(['"])([^'"]*\.amxd)\2""",
+        f'save_amxd(\\1, "{out}/device.amxd"',
         code,
     )
 

@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     @property
     def output_path(self) -> Path:
-        path = Path(self.output_dir)
+        path = Path(self.output_dir).resolve()
         path.mkdir(parents=True, exist_ok=True)
         return path
 
