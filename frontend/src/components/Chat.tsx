@@ -29,7 +29,7 @@ export function Chat({ messages, isLoading, onSend, apiKeySet }: Props) {
       <div className="messages">
         {messages.length === 0 && (
           <div className="welcome">
-            <h2>MaxPy Studio</h2>
+            <h2>MaxPyLang Studio</h2>
             <p>Describe an audio plugin and I'll generate it for Ableton Live.</p>
             <div className="suggestions">
               <button onClick={() => onSend("Make me a chorus effect with rate and depth knobs")}>
@@ -51,7 +51,7 @@ export function Chat({ messages, isLoading, onSend, apiKeySet }: Props) {
         {messages.map((msg) => (
           <div key={msg.id} className={`message ${msg.role}`}>
             <div className="message-role">
-              {msg.role === "user" ? "You" : "MaxPy Studio"}
+              {msg.role === "user" ? "You" : "MaxPyLang Studio"}
             </div>
             <div className="message-content">
               {msg.content}

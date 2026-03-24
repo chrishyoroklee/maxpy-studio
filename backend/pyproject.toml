@@ -1,7 +1,7 @@
 [project]
-name = "maxpy-studio-backend"
+name = "maxpylang-studio-backend"
 version = "0.1.0"
-description = "Backend for MaxPy Studio — generate M4L plugins from natural language"
+description = "Backend for MaxPyLang Studio — generate M4L plugins from natural language"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

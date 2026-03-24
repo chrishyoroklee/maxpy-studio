@@ -5,8 +5,8 @@ from app.config import settings
 from app.api import generate, download, history
 
 app = FastAPI(
-    title="MaxPy Studio",
-    description="Generate Max for Live audio plugins from natural language prompts",
+    title="MaxPyLang Studio",
+    description="MaxPyLang Studio — generate Max for Live audio plugins from natural language prompts",
     version="0.1.0",
 )
 

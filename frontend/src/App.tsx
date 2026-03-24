@@ -17,7 +17,7 @@ function App() {
     <div className="app">
       <header className="header">
         <div className="header-left">
-          <h1>MaxPy Studio</h1>
+          <h1>MaxPyLang Studio</h1>
           <span className="header-tagline">AI-powered Max for Live plugin generator</span>
         </div>
         <ApiKeyInput
