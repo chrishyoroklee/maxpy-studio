@@ -21,11 +21,11 @@ router = APIRouter()
 
 class Message(BaseModel):
     role: Literal["user", "assistant"]
-    content: str = Field(max_length=8000)
+    content: str
 
 
 class GenerateRequest(BaseModel):
-    prompt: str = Field(..., min_length=1, max_length=4000)
+    prompt: str = Field(..., min_length=1)
     model: str = "claude-sonnet-4-20250514"
     messages: list[Message] = []
     session_id: str | None = None
