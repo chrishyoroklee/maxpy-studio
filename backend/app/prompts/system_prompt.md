@@ -159,6 +159,33 @@ dial = place_raw({
 - Only inlet 0 triggers computation (hot inlet)
 - Feedback loops need `*~ < 1.0` to prevent runaway
 
+## Critical: Inlet/Outlet Counts
+
+Objects placed with `patch.place()` get their inlet/outlet counts from maxpylang's database. You MUST use the correct indices. Common counts:
+
+| Object | Inlets | Outlets |
+|--------|--------|---------|
+| `+~`, `-~`, `*~`, `/~` | 2 | 1 |
+| `clip~ -1. 1.` | 3 | 1 |
+| `lores~` | 3 (signal, cutoff, resonance) | 1 |
+| `cycle~` | 2 (frequency, phase) | 1 |
+| `noise~` | 1 | 1 |
+| `plugout~` | 2 (left, right) | 2 |
+| `tapin~` | 1 | 1 |
+| `tapout~` | 1 | 1+ |
+| `degrade~` | 3 (signal, sr_factor, bits) | 1 |
+| `snapshot~` | 1 | 1 |
+| `sig~` | 1 | 1 |
+| `line~` | 1 | 1 |
+| `select` | varies | varies |
+
+For `place_raw()` objects, the inlet/outlet count is set by the dict:
+- `plugin~`: numinlets=2, numoutlets=2
+- `live.dial`: numinlets=1, numoutlets=2 (outlet 0 = value)
+- `notein`: numinlets=1, numoutlets=3 (note, velocity, channel)
+
+**If unsure about an object's inlet count, use fewer connections rather than guessing. An IndexError on `.ins[N]` or `.outs[N]` means N is too large.**
+
 ## Common Audio Objects
 
 | Category | Objects |
