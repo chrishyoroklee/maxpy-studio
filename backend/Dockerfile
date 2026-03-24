@@ -13,6 +13,8 @@ COPY sandbox/ sandbox/
 # Create output directory
 RUN mkdir -p /app/generated
 
-EXPOSE 8000
+# Render uses PORT env var
+ENV PORT=8000
+EXPOSE ${PORT}
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT}

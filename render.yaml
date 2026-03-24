@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: maxpylang-studio-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        sync: false  # set this after deploying frontend to Vercel
+      - key: OUTPUT_DIR
+        value: /app/generated
