@@ -42,18 +42,18 @@ export function Chat({ messages, isLoading, onSend, apiKeySet }: Props) {
         {messages.length === 0 && (
           <div className="welcome">
             <h2>MaxPyLang Studio</h2>
-            <p>Describe an audio plugin and I'll generate it for Ableton Live.</p>
+            <p>Describe a plugin. Get an .amxd for Ableton.</p>
             <div className="suggestions">
-              <button onClick={() => onSend("Make me a chorus effect with rate and depth knobs")}>
-                Chorus effect
+              <button onClick={() => onSend("Make a chorus effect with rate and depth knobs")}>
+                Chorus
               </button>
               <button onClick={() => onSend("Create a tremolo with rate and depth controls")}>
                 Tremolo
               </button>
-              <button onClick={() => onSend("Build a simple 3-band EQ with low, mid, and high knobs")}>
+              <button onClick={() => onSend("Build a 3-band EQ with low, mid, and high gain")}>
                 3-Band EQ
               </button>
-              <button onClick={() => onSend("Make a lo-fi bitcrusher with crush and sample rate knobs")}>
+              <button onClick={() => onSend("Make a bitcrusher with crush and sample rate controls")}>
                 Bitcrusher
               </button>
             </div>
