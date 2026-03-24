@@ -32,11 +32,25 @@ patch.connect(
 
 ### Saving
 ```python
-patch.save("device.maxpat")                                    # .maxpat only
-patch.save("device.amxd", device_type="audio_effect")          # .amxd (M4L)
+import json
+
+# Step 1: Save .maxpat (for debugging in Max)
+patch.save("device.maxpat")
+
+# Step 2: Enable presentation mode, then save .amxd
+patcher_json = patch.get_json()
+patcher_json["patcher"]["openinpresentation"] = 1
+with open("device.maxpat", "w") as f:
+    json.dump(patcher_json, f, indent=2)
+
+# Step 3: Save as .amxd using amxd helper
+from amxd import save_amxd
+save_amxd(patcher_json, "device.amxd", device_type="audio_effect")
 ```
 
-Device types: `"audio_effect"`, `"instrument"`, `"midi_effect"`
+Device types for `save_amxd()`: `"audio_effect"`, `"instrument"`, `"midi_effect"`
+
+**IMPORTANT**: Do NOT use `patch.save("file.amxd", device_type=...)` — that parameter doesn't exist. Always use the `save_amxd()` function from the `amxd` module as shown above.
 
 ### place_raw() helper
 Some objects (plugin~, live.dial, panel, message boxes, notein) need raw dict construction:
