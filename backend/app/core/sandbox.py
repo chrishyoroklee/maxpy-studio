@@ -31,11 +31,12 @@ class SandboxResult:
         self.files = files  # {"maxpat": Path, "amxd": Path}
 
 
-def execute(code: str, timeout: int = 30) -> SandboxResult:
+def execute(code: str, generation_id: str | None = None, timeout: int = 30) -> SandboxResult:
     """Run generated maxpylang code and collect output files.
 
     Args:
         code: Python source code to execute.
+        generation_id: Optional UUID to use. If None, a new one is created.
         timeout: Max execution time in seconds.
 
     Returns:
@@ -44,7 +45,9 @@ def execute(code: str, timeout: int = 30) -> SandboxResult:
     Raises:
         SandboxError: If execution fails or times out.
     """
-    generation_id = str(uuid.uuid4())
+    if generation_id is None:
+        generation_id = str(uuid.uuid4())
+
     output_dir = settings.output_path / generation_id
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -63,6 +66,15 @@ def execute(code: str, timeout: int = 30) -> SandboxResult:
     # (ensures maxpylang is importable)
     python_exec = sys.executable
 
+    # Minimal environment — do NOT leak server secrets to the subprocess
+    safe_env = {
+        "PATH": os.environ.get("PATH", "/usr/bin:/usr/local/bin"),
+        "HOME": os.environ.get("HOME", "/tmp"),
+        "PYTHONPATH": os.environ.get("PYTHONPATH", ""),
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "VIRTUAL_ENV": os.environ.get("VIRTUAL_ENV", ""),
+    }
+
     try:
         result = subprocess.run(
             [python_exec, str(code_file)],
@@ -70,10 +82,7 @@ def execute(code: str, timeout: int = 30) -> SandboxResult:
             text=True,
             timeout=timeout,
             cwd=str(output_dir),
-            env={
-                **os.environ,
-                "PYTHONDONTWRITEBYTECODE": "1",
-            },
+            env=safe_env,
         )
     except subprocess.TimeoutExpired:
         raise SandboxError(f"Code execution timed out after {timeout}s")

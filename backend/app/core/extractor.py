@@ -2,35 +2,30 @@
 
 import re
 
-# Imports and patterns that should never appear in generated code
+# Only these import patterns are allowed in generated code
+ALLOWED_IMPORTS = re.compile(
+    r"^(?:"
+    r"import maxpylang"
+    r"|from maxpylang[.\s].*"
+    r"|import maxpylang\s+as\s+\w+"
+    r"|import json"
+    r"|from amxd\s+import.*"
+    r"|import struct"
+    r"|import numpy"
+    r"|from numpy.*"
+    r")$"
+)
+
+# Additional dangerous patterns beyond imports
 DANGEROUS_PATTERNS = [
-    r"\bos\.system\b",
-    r"\bos\.popen\b",
-    r"\bos\.exec",
-    r"\bos\.spawn",
-    r"\bos\.remove\b",
-    r"\bos\.unlink\b",
-    r"\bos\.rmdir\b",
-    r"\bsubprocess\b",
-    r"\bshutil\b",
-    r"\b__import__\b",
     r"\beval\s*\(",
     r"\bexec\s*\(",
     r"\bcompile\s*\(",
     r"\bgetattr\s*\(",
-    r"\bimport\s+os\b",
-    r"\bfrom\s+os\b",
-    r"\bimport\s+sys\b",
-    r"\bimport\s+socket\b",
-    r"\bimport\s+http\b",
-    r"\bimport\s+urllib\b",
-    r"\bimport\s+requests\b",
-    r"\bimport\s+pathlib\b",
-    r"\bimport\s+glob\b",
-    r"\bimport\s+shlex\b",
-    r"\bimport\s+ctypes\b",
-    r"\bimport\s+pickle\b",
-    r"\bopen\s*\([^)]*['\"]/(etc|proc|sys|dev)",  # block filesystem traversal
+    r"\b__import__\b",
+    r"\b__builtins__\b",
+    r"\bglobals\s*\(",
+    r"\blocals\s*\(",
 ]
 
 
@@ -73,7 +68,19 @@ def extract_code(llm_response: str) -> str:
 def _validate(code: str) -> None:
     """Validate that extracted code is safe and structurally correct."""
 
-    # Check for dangerous patterns
+    # Check imports against allowlist
+    for line in code.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("import ", "from ")):
+            # Remove trailing comments
+            import_stmt = stripped.split("#")[0].strip()
+            if not ALLOWED_IMPORTS.match(import_stmt):
+                raise ExtractionError(
+                    f"Forbidden import: {import_stmt}. "
+                    f"Only maxpylang, json, amxd, struct, and numpy imports are allowed."
+                )
+
+    # Check for dangerous runtime patterns
     for pattern in DANGEROUS_PATTERNS:
         if re.search(pattern, code):
             raise ExtractionError(
@@ -81,7 +88,7 @@ def _validate(code: str) -> None:
             )
 
     # Must import maxpylang
-    if "maxpylang" not in code and "import mp" not in code:
+    if "maxpylang" not in code:
         raise ExtractionError(
             "Generated code does not import maxpylang."
         )

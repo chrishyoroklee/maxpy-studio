@@ -48,8 +48,8 @@ export function Chat({ messages, isLoading, onSend, apiKeySet }: Props) {
           </div>
         )}
 
-        {messages.map((msg, i) => (
-          <div key={i} className={`message ${msg.role}`}>
+        {messages.map((msg) => (
+          <div key={msg.id} className={`message ${msg.role}`}>
             <div className="message-role">
               {msg.role === "user" ? "You" : "MaxPy Studio"}
             </div>

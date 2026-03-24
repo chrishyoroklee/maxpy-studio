@@ -15,8 +15,12 @@ class TestHealthEndpoint:
 
 
 class TestDownloadEndpoint:
-    def test_missing_generation_returns_404(self):
+    def test_invalid_id_returns_400(self):
         response = client.get("/api/download/nonexistent-id")
+        assert response.status_code == 400
+
+    def test_valid_uuid_but_missing_returns_404(self):
+        response = client.get("/api/download/00000000-0000-4000-8000-000000000000")
         assert response.status_code == 404
 
     def test_download_requires_valid_id(self):

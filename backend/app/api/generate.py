@@ -1,23 +1,33 @@
 """POST /api/generate — main endpoint for plugin generation."""
 
 import json
+import logging
 import uuid
+from typing import Literal
+
 from fastapi import APIRouter, Header
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.llm import generate_code
 from app.core.extractor import extract_code, ExtractionError
 from app.core.sandbox import execute, SandboxError
 from app.models import firestore
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
+class Message(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(max_length=8000)
+
+
 class GenerateRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(..., min_length=1, max_length=4000)
     model: str = "claude-sonnet-4-20250514"
-    messages: list[dict] = []  # prior conversation for multi-turn
+    messages: list[Message] = []
     session_id: str | None = None
 
 
@@ -32,7 +42,9 @@ async def generate(
     and returns the generation ID for download.
     """
     generation_id = str(uuid.uuid4())
-    messages = req.messages + [{"role": "user", "content": req.prompt}]
+    messages = [m.model_dump() for m in req.messages] + [
+        {"role": "user", "content": req.prompt}
+    ]
 
     async def event_stream():
         full_response = ""
@@ -44,8 +56,9 @@ async def generate(
                 full_response += chunk
                 yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
         except Exception as e:
-            _save(generation_id, req, full_response, None, "error", str(e))
-            yield f"data: {json.dumps({'type': 'error', 'content': f'LLM error: {str(e)}'})}\n\n"
+            logger.error("LLM error: %s", e)
+            _save(generation_id, req, full_response, None, "error", "LLM request failed")
+            yield f"data: {json.dumps({'type': 'error', 'content': 'LLM request failed. Check your API key and model.'})}\n\n"
             return
 
         # Extract code from response
@@ -57,14 +70,15 @@ async def generate(
             yield f"data: {json.dumps({'type': 'error', 'content': f'Code extraction failed: {str(e)}'})}\n\n"
             return
 
-        # Execute in sandbox
+        # Execute in sandbox — pass the same generation_id so download URL matches
         try:
             yield f"data: {json.dumps({'type': 'status', 'content': 'Executing code...'})}\n\n"
-            result = execute(code)
+            result = execute(code, generation_id=generation_id)
             _save(generation_id, req, full_response, code, "success",
                   amxd_path=str(result.files.get("amxd", "")))
-            yield f"data: {json.dumps({'type': 'success', 'generation_id': result.generation_id, 'stdout': result.stdout})}\n\n"
+            yield f"data: {json.dumps({'type': 'success', 'generation_id': generation_id, 'stdout': result.stdout})}\n\n"
         except SandboxError as e:
+            logger.error("Sandbox error: %s", e)
             _save(generation_id, req, full_response, code, "error", str(e))
             yield f"data: {json.dumps({'type': 'error', 'content': f'Execution failed: {str(e)}'})}\n\n"
             return
@@ -103,5 +117,5 @@ def _save(
             amxd_path=amxd_path,
             session_id=req.session_id,
         )
-    except Exception:
-        pass  # Don't fail the request if Firestore is down
+    except Exception as e:
+        logger.warning("Failed to save to Firestore: %s", e)

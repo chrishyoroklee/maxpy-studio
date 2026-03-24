@@ -8,16 +8,22 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 _db = None
 _storage_bucket = None
 _firebase_available = False
+_init_attempted = False
 
 
 def _init_firebase():
     """Lazy-initialize Firebase. Only called on first DB access."""
-    global _db, _storage_bucket, _firebase_available
-    if _db is not None or not _firebase_available:
+    global _db, _storage_bucket, _firebase_available, _init_attempted
+    if _init_attempted:
         return
+    _init_attempted = True
 
     try:
         import firebase_admin
@@ -31,7 +37,7 @@ def _init_firebase():
                     "storageBucket": os.environ.get("FIREBASE_STORAGE_BUCKET", ""),
                 })
             else:
-                # No credentials — run in local-only mode
+                logger.info("No Firebase credentials configured — running in local-only mode")
                 return
 
         _db = firestore.client()
@@ -40,8 +46,9 @@ def _init_firebase():
         except Exception:
             _storage_bucket = None
         _firebase_available = True
-    except Exception:
-        pass
+        logger.info("Firebase initialized successfully")
+    except Exception as e:
+        logger.warning("Firebase initialization failed: %s", e)
 
 
 def is_available() -> bool:

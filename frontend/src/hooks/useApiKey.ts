@@ -1,15 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export function useApiKey() {
-  const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState("claude-sonnet-4-20250514");
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("maxpy-api-key");
-    if (saved) setApiKey(saved);
-    const savedModel = sessionStorage.getItem("maxpy-model");
-    if (savedModel) setModel(savedModel);
-  }, []);
+  const [apiKey, setApiKey] = useState(
+    () => sessionStorage.getItem("maxpy-api-key") ?? ""
+  );
+  const [model, setModel] = useState(
+    () => sessionStorage.getItem("maxpy-model") ?? "claude-sonnet-4-20250514"
+  );
 
   const saveApiKey = (key: string) => {
     setApiKey(key);
