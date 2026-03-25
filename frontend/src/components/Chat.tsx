@@ -109,40 +109,78 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey,
           </div>
         )}
 
-        {messages.map((msg) => (
-          <div key={msg.id} className={`message ${msg.role}`}>
-            <div className="message-role">
-              {msg.role === "user" ? "You" : "Studio"}
-            </div>
-            <div className="message-content">
-              {msg.content}
-              {msg.error && (
-                <div className="message-error">{msg.error}</div>
-              )}
-              {msg.amxdB64 && (
-                <button
-                  className="download-button"
-                  onClick={() => downloadAmxd(msg.amxdB64!, "device.amxd")}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Download .amxd
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+        {embedded ? (
+          <>
+            {(() => {
+              const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
+              if (isLoading) return (
+                <div className="embedded-status">
+                  <div className="loading-bars"><span /><span /><span /></div>
+                  <span className="embedded-status-text">Creating...</span>
+                </div>
+              );
+              if (lastAssistant?.error) return (
+                <div className="embedded-status">
+                  <span style={{ color: "var(--error)" }}>Error: {lastAssistant.error}</span>
+                </div>
+              );
+              if (lastAssistant?.amxdB64) return (
+                <div className="embedded-status">
+                  <span className="embedded-status-success">Created!</span>
+                  <button
+                    className="download-button"
+                    onClick={() => downloadAmxd(lastAssistant.amxdB64!, "device.amxd")}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download
+                  </button>
+                </div>
+              );
+              return null;
+            })()}
+          </>
+        ) : (
+          <>
+            {messages.map((msg) => (
+              <div key={msg.id} className={`message ${msg.role}`}>
+                <div className="message-role">
+                  {msg.role === "user" ? "You" : "Studio"}
+                </div>
+                <div className="message-content">
+                  {msg.content}
+                  {msg.error && (
+                    <div className="message-error">{msg.error}</div>
+                  )}
+                  {msg.amxdB64 && (
+                    <button
+                      className="download-button"
+                      onClick={() => downloadAmxd(msg.amxdB64!, "device.amxd")}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Download .amxd
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
 
-        {isLoading && (
-          <div className="loading-indicator">
-            <div className="loading-bars">
-              <span /><span /><span />
-            </div>
-            <span>Generating...</span>
-          </div>
+            {isLoading && (
+              <div className="loading-indicator">
+                <div className="loading-bars">
+                  <span /><span /><span />
+                </div>
+                <span>Generating...</span>
+              </div>
+            )}
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>

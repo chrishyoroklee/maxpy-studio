@@ -550,13 +550,20 @@ body {
   border-radius: 4px;
 }
 
+.app.embedded .chat-container {
+  height: auto;
+  flex: none;
+}
+
 .app.embedded .messages {
   padding: 6px 10px;
   max-width: 100%;
+  flex: none;
+  overflow-y: visible;
 }
 
 .app.embedded .welcome {
-  padding: 4px 10px 4px;
+  padding: 4px 10px 0;
 }
 
 .app.embedded .welcome h2 {
@@ -588,28 +595,62 @@ body {
 }
 
 .app.embedded .input-form {
-  padding: 8px 12px 12px;
+  padding: 4px 10px 6px;
   max-width: 100%;
 }
 
 .app.embedded .input-wrapper {
-  padding: 6px 8px 6px 12px;
+  padding: 4px 6px 4px 10px;
 }
 
 .app.embedded .chat-input {
-  font-size: 13px;
+  font-size: 12px;
 }
 
-.app.embedded .message {
-  margin-bottom: 16px;
+.app.embedded .send-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
 }
 
-.app.embedded .message.user .message-content,
-.app.embedded .message.assistant .message-content {
-  font-size: 13px;
+.app.embedded .send-button svg {
+  width: 14px;
+  height: 14px;
 }
 
-.app.embedded .message-role {
-  font-size: 10px;
-  margin-bottom: 4px;
+/* Status bar replaces full chat in embedded mode */
+.embedded-status {
+  padding: 6px 10px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.embedded-status .loading-bars {
+  height: 12px;
+}
+
+.embedded-status .loading-bars span {
+  width: 2px;
+}
+
+.embedded-status-text {
+  color: var(--text-secondary);
+}
+
+.embedded-status-success {
+  color: #4ade80;
+}
+
+.embedded-status .download-button {
+  margin-top: 0;
+  padding: 4px 10px;
+  font-size: 11px;
+  gap: 4px;
+}
+
+.embedded-status .download-button svg {
+  width: 12px;
+  height: 12px;
 }
