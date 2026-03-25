@@ -554,27 +554,26 @@ body {
 }
 
 .app.embedded .welcome {
-  padding: 24px 16px 16px;
+  padding: 8px 16px 8px;
 }
 
 .app.embedded .welcome h2 {
-  font-size: 24px;
-  margin-bottom: 6px;
+  font-size: 20px;
+  margin-bottom: 8px;
 }
 
 .app.embedded .welcome p {
-  font-size: 13px;
-  margin-bottom: 20px;
+  display: none;
 }
 
 .app.embedded .suggestions {
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
   max-width: 100%;
 }
 
 .app.embedded .suggestion-card {
-  padding: 10px;
+  padding: 8px 10px;
 }
 
 .app.embedded .suggestion-label {
@@ -582,7 +581,7 @@ body {
 }
 
 .app.embedded .suggestion-desc {
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .app.embedded .input-form {
