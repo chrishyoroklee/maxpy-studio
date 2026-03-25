@@ -529,7 +529,7 @@ body {
 .embedded-api-bar {
   display: flex;
   gap: 4px;
-  padding: 8px 12px;
+  padding: 4px 8px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   flex-shrink: 0;
@@ -538,28 +538,30 @@ body {
 .embedded-api-bar .api-key-input {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
-  padding: 5px 8px;
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 4px;
 }
 
 .embedded-api-bar .model-select {
-  font-size: 12px;
-  padding: 5px 8px;
-  padding-right: 22px;
+  font-size: 11px;
+  padding: 3px 6px;
+  padding-right: 18px;
+  border-radius: 4px;
 }
 
 .app.embedded .messages {
-  padding: 12px 16px;
+  padding: 6px 10px;
   max-width: 100%;
 }
 
 .app.embedded .welcome {
-  padding: 8px 16px 8px;
+  padding: 4px 10px 4px;
 }
 
 .app.embedded .welcome h2 {
-  font-size: 20px;
-  margin-bottom: 8px;
+  font-size: 14px;
+  margin-bottom: 6px;
 }
 
 .app.embedded .welcome p {
@@ -568,20 +570,21 @@ body {
 
 .app.embedded .suggestions {
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: 4px;
   max-width: 100%;
 }
 
 .app.embedded .suggestion-card {
-  padding: 8px 10px;
+  padding: 4px 6px;
+  border-radius: 6px;
 }
 
 .app.embedded .suggestion-label {
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .app.embedded .suggestion-desc {
-  font-size: 10px;
+  display: none;
 }
 
 .app.embedded .input-form {
