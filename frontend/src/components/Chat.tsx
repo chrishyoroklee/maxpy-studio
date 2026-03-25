@@ -42,8 +42,14 @@ function downloadAmxd(b64: string, filename: string) {
 
 export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey, setApiKey, model, setModel }: Props) {
   const [input, setInput] = useState("");
+  const [savedToDesktop, setSavedToDesktop] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Reset saved state when new messages arrive
+  useEffect(() => {
+    setSavedToDesktop(false);
+  }, [messages.length]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -112,18 +118,32 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey,
               );
               if (lastAssistant?.amxdB64) return (
                 <div className="embedded-status">
-                  <span className="embedded-status-success">Created!</span>
-                  <button
-                    className="download-button"
-                    onClick={() => downloadAmxd(lastAssistant.amxdB64!, "device.amxd")}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Download
-                  </button>
+                  {savedToDesktop ? (
+                    <span className="embedded-status-success">Saved to Desktop!</span>
+                  ) : (
+                    <>
+                      <span className="embedded-status-success">Created!</span>
+                      <button
+                        className="download-button"
+                        onClick={() => {
+                          const w = window as any;
+                          if (w.max) {
+                            w.max.outlet("save_amxd", lastAssistant.amxdB64);
+                            setSavedToDesktop(true);
+                          } else {
+                            downloadAmxd(lastAssistant.amxdB64!, "device.amxd");
+                          }
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Save to Desktop
+                      </button>
+                    </>
+                  )}
                 </div>
               );
               return null;
