@@ -54,6 +54,37 @@ const SUGGESTIONS = [
     desc: "Transpose up or down",
     prompt: "Build a pitch shifter audio effect. Write the plugin~ input into a buffer~ using record~. Read it back with play~ at a different speed controlled by Shift live.dial (-12 to 12 semitones, default 0). Convert semitones to playback rate with expr pow(2, $f1/12). Use sig~ to convert the rate to signal for play~. Mix the pitch-shifted signal with the dry using *~ and +~, controlled by Mix live.dial (0–1, default 0.5). clip~ -1. 1. before plugout~.",
   },
+  // --- Instruments (device_type="instrument") ---
+  {
+    label: "Mono Synth",
+    desc: "Classic subtractive mono",
+    prompt: "Build a mono synth M4L instrument. Use notein (place_raw, 3 outlets: note, velocity, channel). Convert note to frequency with mtof, then sig~ to feed cycle~ for a saw-like tone (use phasor~ for sawtooth). Filter through lores~ with Cutoff live.dial (100–15000 Hz, default 2000) and Resonance live.dial (0–1, default 0.3). For amplitude envelope: velocity outlet from notein → compare > 0 → select 1 0 → line~ (note-on: '0.8 10' for attack, note-off: '0. 300' for release). Multiply oscillator output by envelope with *~. clip~ -1. 1. before plugout~. Save with device_type='instrument'.",
+  },
+  {
+    label: "Bass Synth",
+    desc: "Thick sub bass",
+    prompt: "Build a bass synth M4L instrument. Use notein (place_raw). Convert note → mtof → sig~ to get frequency signal. Create 2 layers: cycle~ at the base frequency for sub, and phasor~ at the same frequency for grit. Mix them with *~ 0.7 and *~ 0.3 then +~. Filter through lores~ with Cutoff live.dial (50–3000 Hz, default 500) and Res live.dial (0–0.8, default 0.4). Amplitude envelope from velocity: > 0 → select 1 0 → line~ (attack '0.9 5', release '0. 200'). VCA with *~. clip~ -1. 1. before plugout~. Save with device_type='instrument'.",
+  },
+  {
+    label: "Electric Piano",
+    desc: "FM synthesis keys",
+    prompt: "Build an electric piano M4L instrument using 2-operator FM synthesis. Use notein (place_raw). Convert note → mtof → sig~ for carrier frequency. Modulator: cycle~ at 2x carrier frequency (use *~ 2 on the frequency signal), scaled by ModDepth live.dial (0–1000, default 200) with *~. Add modulator output to carrier frequency with +~, feed into carrier cycle~. Amplitude envelope from velocity: > 0 → select 1 0 → line~ (attack '0.7 2', release '0. 800' for piano-like decay). VCA with *~. clip~ -1. 1. before plugout~. Save with device_type='instrument'.",
+  },
+  {
+    label: "Organ",
+    desc: "Additive harmonic tones",
+    prompt: "Build an organ M4L instrument using additive synthesis. Use notein (place_raw). Convert note → mtof → sig~ for base frequency. Create 4 harmonics: cycle~ at 1x freq (fundamental, *~ 0.5), cycle~ at 2x freq (*~ 0.3), cycle~ at 3x freq (*~ 0.1), cycle~ at 4x freq (*~ 0.05). Multiply frequency by 2, 3, 4 using *~ for each harmonic. Sum all with +~. Use live.dial controls for each harmonic level (0–1). Simple envelope from velocity: > 0 → select 1 0 → line~ (attack '0.6 10', release '0. 100'). VCA with *~. clip~ -1. 1. before plugout~. Save with device_type='instrument'.",
+  },
+  {
+    label: "Pad",
+    desc: "Wide detuned wash",
+    prompt: "Build a pad synth M4L instrument. Use notein (place_raw). Convert note → mtof → sig~ for base frequency. Create 3 detuned cycle~ oscillators: one at base freq, one at freq *~ 1.003 (slightly sharp), one at freq *~ 0.997 (slightly flat). Sum with +~ and scale with *~ 0.33. Filter through lores~ with Cutoff live.dial (200–8000 Hz, default 3000) and Res live.dial (0–0.5, default 0.2). Slow envelope from velocity: > 0 → select 1 0 → line~ (attack '0.5 500' for slow fade in, release '0. 2000' for long release). VCA with *~. clip~ -1. 1. before plugout~. Save with device_type='instrument'.",
+  },
+  {
+    label: "Pluck",
+    desc: "Karplus-Strong strings",
+    prompt: "Build a pluck synth M4L instrument using Karplus-Strong synthesis. Use notein (place_raw). Convert note → mtof to get frequency. Calculate delay time: 1000/frequency ms for the pitch. On note-on (velocity > 0 → select 1 0), trigger a short burst of noise~ gated by line~ (attack '1. 1', release '0. 5' — very short 5ms burst). Feed this into tapin~ 50 → tapout~ at the calculated delay time. Feed tapout~ output through lores~ at 5000 Hz (acts as string damping, Damping live.dial 1000–10000 Hz default 5000) and *~ 0.99 for feedback, back into the tapin~ summer (+~). The tapout~ output is the pluck sound. clip~ -1. 1. before plugout~. Save with device_type='instrument'.",
+  },
 ];
 
 const MODELS = [
