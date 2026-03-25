@@ -60,34 +60,20 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey,
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
+
+    // In embedded mode, first submission sets the API key
+    if (embedded && !apiKeySet) {
+      setApiKey?.(input.trim());
+      setInput("");
+      return;
+    }
+
     onSend(input.trim());
     setInput("");
   };
 
   return (
     <div className="chat-container">
-      {embedded && (
-        <div className="embedded-api-bar">
-          <input
-            type="password"
-            placeholder="API key..."
-            value={apiKey ?? ""}
-            onChange={(e) => setApiKey?.(e.target.value)}
-            className="api-key-input"
-          />
-          <select
-            value={model ?? "claude-sonnet-4-20250514"}
-            onChange={(e) => setModel?.(e.target.value)}
-            className="model-select"
-          >
-            {MODELS.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       <div className="messages">
         {messages.length === 0 && (
@@ -187,6 +173,16 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey,
 
       <form onSubmit={handleSubmit} className="input-form">
         <div className="input-wrapper">
+          {embedded && apiKeySet && (
+            <button
+              type="button"
+              className="key-reset"
+              onClick={() => { setApiKey?.(""); }}
+              title="Change API key"
+            >
+              Key
+            </button>
+          )}
           <textarea
             ref={textareaRef}
             value={input}
@@ -198,17 +194,28 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey,
               }
             }}
             placeholder={
-              apiKeySet
-                ? "Describe the plugin you want..."
-                : "Enter your API key above first"
+              embedded
+                ? (apiKeySet ? "Describe a plugin..." : "Paste your API key...")
+                : (apiKeySet ? "Describe the plugin you want..." : "Enter your API key above first")
             }
-            disabled={!apiKeySet || isLoading}
+            disabled={(!embedded && !apiKeySet) || isLoading}
             rows={1}
             className="chat-input"
           />
+          {embedded && apiKeySet && (
+            <select
+              value={model ?? "claude-sonnet-4-20250514"}
+              onChange={(e) => setModel?.(e.target.value)}
+              className="model-select embedded-model-select"
+            >
+              {MODELS.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          )}
           <button
             type="submit"
-            disabled={!apiKeySet || isLoading || !input.trim()}
+            disabled={isLoading || !input.trim()}
             className="send-button"
             aria-label="Generate"
           >
