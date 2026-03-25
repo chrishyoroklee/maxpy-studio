@@ -92,6 +92,10 @@ const MODELS = [
   { value: "claude-opus-4-20250514", label: "Opus 4" },
   { value: "gpt-4o", label: "GPT-4o" },
   { value: "gpt-4o-mini", label: "4o Mini" },
+  { value: "gemini/gemini-2.5-pro-preview-06-05", label: "Gemini 2.5 Pro" },
+  { value: "gemini/gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash" },
+  { value: "deepseek/deepseek-chat", label: "DeepSeek V3" },
+  { value: "mistral/mistral-large-latest", label: "Mistral Large" },
 ];
 
 function downloadAmxd(b64: string, filename: string) {
