@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { ChatMessage } from "../hooks/useChat";
+import { getDownloadUrl } from "../api/client";
 
 interface Props {
   messages: ChatMessage[];
@@ -126,16 +127,11 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey,
                       <button
                         className="download-button"
                         onClick={() => {
-                          if (window.parent !== window) {
-                            // Inside jweb iframe wrapper — postMessage to parent
-                            window.parent.postMessage({ type: "save_amxd", b64: lastAssistant.amxdB64 }, "*");
-                            setSavedToDesktop(true);
-                          } else if ((window as any).max) {
-                            // Direct jweb (local file)
-                            (window as any).max.outlet("save_amxd", lastAssistant.amxdB64);
+                          if (lastAssistant.generationId) {
+                            // Open download URL — in jweb this opens system browser
+                            window.open(getDownloadUrl(lastAssistant.generationId), "_blank");
                             setSavedToDesktop(true);
                           } else {
-                            // Regular browser
                             downloadAmxd(lastAssistant.amxdB64!, "device.amxd");
                           }
                         }}
