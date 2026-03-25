@@ -518,3 +518,96 @@ body {
   0%, 100% { height: 4px; }
   50% { height: 16px; }
 }
+
+/* ==================== Embedded Mode (M4L jweb) ==================== */
+
+.app.embedded {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.embedded-api-bar {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.embedded-api-bar .api-key-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+.embedded-api-bar .model-select {
+  font-size: 12px;
+  padding: 5px 8px;
+  padding-right: 22px;
+}
+
+.app.embedded .messages {
+  padding: 12px 16px;
+  max-width: 100%;
+}
+
+.app.embedded .welcome {
+  padding: 24px 16px 16px;
+}
+
+.app.embedded .welcome h2 {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.app.embedded .welcome p {
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.app.embedded .suggestions {
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.app.embedded .suggestion-card {
+  padding: 10px;
+}
+
+.app.embedded .suggestion-label {
+  font-size: 12px;
+}
+
+.app.embedded .suggestion-desc {
+  font-size: 11px;
+}
+
+.app.embedded .input-form {
+  padding: 8px 12px 12px;
+  max-width: 100%;
+}
+
+.app.embedded .input-wrapper {
+  padding: 6px 8px 6px 12px;
+}
+
+.app.embedded .chat-input {
+  font-size: 13px;
+}
+
+.app.embedded .message {
+  margin-bottom: 16px;
+}
+
+.app.embedded .message.user .message-content,
+.app.embedded .message.assistant .message-content {
+  font-size: 13px;
+}
+
+.app.embedded .message-role {
+  font-size: 10px;
+  margin-bottom: 4px;
+}

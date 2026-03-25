@@ -6,6 +6,11 @@ interface Props {
   isLoading: boolean;
   onSend: (prompt: string) => void;
   apiKeySet: boolean;
+  embedded?: boolean;
+  apiKey?: string;
+  setApiKey?: (key: string) => void;
+  model?: string;
+  setModel?: (model: string) => void;
 }
 
 const SUGGESTIONS = [
@@ -13,6 +18,13 @@ const SUGGESTIONS = [
   { label: "Tremolo", desc: "Amplitude modulation with sync", prompt: "Create a tremolo with rate and depth controls" },
   { label: "3-Band EQ", desc: "Shape lows, mids & highs", prompt: "Build a 3-band EQ with low, mid, and high gain" },
   { label: "Bitcrusher", desc: "Lo-fi bit reduction & aliasing", prompt: "Make a bitcrusher with crush and sample rate controls" },
+];
+
+const MODELS = [
+  { value: "claude-sonnet-4-20250514", label: "Sonnet 4" },
+  { value: "claude-opus-4-20250514", label: "Opus 4" },
+  { value: "gpt-4o", label: "GPT-4o" },
+  { value: "gpt-4o-mini", label: "4o Mini" },
 ];
 
 function downloadAmxd(b64: string, filename: string) {
@@ -28,7 +40,7 @@ function downloadAmxd(b64: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function Chat({ messages, isLoading, onSend, apiKeySet }: Props) {
+export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey, setApiKey, model, setModel }: Props) {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -54,6 +66,29 @@ export function Chat({ messages, isLoading, onSend, apiKeySet }: Props) {
 
   return (
     <div className="chat-container">
+      {embedded && (
+        <div className="embedded-api-bar">
+          <input
+            type="password"
+            placeholder="API key..."
+            value={apiKey ?? ""}
+            onChange={(e) => setApiKey?.(e.target.value)}
+            className="api-key-input"
+          />
+          <select
+            value={model ?? "claude-sonnet-4-20250514"}
+            onChange={(e) => setModel?.(e.target.value)}
+            className="model-select"
+          >
+            {MODELS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="messages">
         {messages.length === 0 && (
           <div className="welcome">
