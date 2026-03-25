@@ -582,14 +582,23 @@ body {
 }
 
 .app.embedded .suggestions {
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  overflow-x: auto;
   gap: 4px;
   max-width: 100%;
+  grid-template-columns: none;
+  scrollbar-width: none;
+}
+
+.app.embedded .suggestions::-webkit-scrollbar {
+  display: none;
 }
 
 .app.embedded .suggestion-card {
-  padding: 4px 6px;
+  padding: 4px 8px;
   border-radius: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .app.embedded .suggestion-label {
