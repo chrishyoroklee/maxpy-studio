@@ -120,7 +120,7 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey,
               if (lastAssistant?.amxdB64) return (
                 <div className="embedded-status">
                   {savedToDesktop ? (
-                    <span className="embedded-status-success">Saved to Desktop!</span>
+                    <span className="embedded-status-success">Link copied! Paste in browser.</span>
                   ) : (
                     <>
                       <span className="embedded-status-success">Created!</span>
@@ -128,20 +128,20 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey,
                         className="download-button"
                         onClick={() => {
                           if (lastAssistant.generationId) {
-                            // Open download URL — in jweb this opens system browser
-                            window.open(getDownloadUrl(lastAssistant.generationId), "_blank");
-                            setSavedToDesktop(true);
+                            const url = getDownloadUrl(lastAssistant.generationId);
+                            navigator.clipboard.writeText(url).then(() => {
+                              setSavedToDesktop(true);
+                            });
                           } else {
                             downloadAmxd(lastAssistant.amxdB64!, "device.amxd");
                           }
                         }}
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                          <polyline points="7 10 12 15 17 10" />
-                          <line x1="12" y1="15" x2="12" y2="3" />
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                         </svg>
-                        Save to Desktop
+                        Copy Link
                       </button>
                     </>
                   )}
