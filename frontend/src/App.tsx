@@ -38,7 +38,6 @@ function App() {
           onSend={handleSend}
           apiKeySet={!!apiKey}
           embedded={embedded}
-          apiKey={apiKey}
           setApiKey={setApiKey}
           model={model}
           setModel={setModel}

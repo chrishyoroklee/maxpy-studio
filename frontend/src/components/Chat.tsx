@@ -8,7 +8,6 @@ interface Props {
   onSend: (prompt: string) => void;
   apiKeySet: boolean;
   embedded?: boolean;
-  apiKey?: string;
   setApiKey?: (key: string) => void;
   model?: string;
   setModel?: (model: string) => void;
@@ -41,7 +40,7 @@ function downloadAmxd(b64: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey, setApiKey, model, setModel }: Props) {
+export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiKey, model, setModel }: Props) {
   const [input, setInput] = useState("");
   const [savedToDesktop, setSavedToDesktop] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
