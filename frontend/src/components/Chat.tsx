@@ -126,11 +126,16 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, apiKey,
                       <button
                         className="download-button"
                         onClick={() => {
-                          const w = window as any;
-                          if (w.max) {
-                            w.max.outlet("save_amxd", lastAssistant.amxdB64);
+                          if (window.parent !== window) {
+                            // Inside jweb iframe wrapper — postMessage to parent
+                            window.parent.postMessage({ type: "save_amxd", b64: lastAssistant.amxdB64 }, "*");
+                            setSavedToDesktop(true);
+                          } else if ((window as any).max) {
+                            // Direct jweb (local file)
+                            (window as any).max.outlet("save_amxd", lastAssistant.amxdB64);
                             setSavedToDesktop(true);
                           } else {
+                            // Regular browser
                             downloadAmxd(lastAssistant.amxdB64!, "device.amxd");
                           }
                         }}
