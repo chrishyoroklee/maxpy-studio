@@ -17,7 +17,7 @@ function App() {
     <div className="app">
       <header className="header">
         <div className="header-left">
-          <img src="/favicon.svg" alt="" className="header-logo" />
+          <img src="/logo.webp" alt="" className="header-logo" />
           <h1>MaxPyLang Studio</h1>
         </div>
         <ApiKeyInput
