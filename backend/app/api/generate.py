@@ -10,10 +10,14 @@ from fastapi import APIRouter, Header
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from pathlib import Path
+
 from app.core.llm import generate_code
 from app.core.extractor import extract_code, ExtractionError
 from app.core.sandbox import execute, SandboxError
 from app.models import firestore
+
+TEMPLATES_DIR = Path(__file__).parent.parent / "prompts" / "templates"
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +36,7 @@ class GenerateRequest(BaseModel):
     model: str = "claude-sonnet-4-20250514"
     messages: list[Message] = []
     session_id: str | None = None
+    template: str | None = None  # base device template name (e.g. "m4l_chorus")
 
 
 @router.post("/generate")
@@ -45,8 +50,22 @@ async def generate(
     If execution fails, sends the error back to the LLM for auto-retry.
     """
     generation_id = str(uuid.uuid4())
+
+    # Build message list, optionally injecting template code
+    user_content = req.prompt
+    if req.template:
+        template_path = TEMPLATES_DIR / f"{req.template}.py"
+        if template_path.exists():
+            template_code = template_path.read_text()
+            user_content = (
+                f"Here is an existing working device code. Modify it based on my request below.\n"
+                f"Keep the same save pattern (save_amxd). Output the complete modified Python code.\n\n"
+                f"```python\n{template_code}\n```\n\n"
+                f"My modification request: {req.prompt}"
+            )
+
     messages = [m.model_dump() for m in req.messages] + [
-        {"role": "user", "content": req.prompt}
+        {"role": "user", "content": user_content}
     ]
 
     async def event_stream():

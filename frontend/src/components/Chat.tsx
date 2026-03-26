@@ -5,7 +5,7 @@ import { getDownloadUrl } from "../api/client";
 interface Props {
   messages: ChatMessage[];
   isLoading: boolean;
-  onSend: (prompt: string) => void;
+  onSend: (prompt: string, template?: string) => void;
   apiKeySet: boolean;
   embedded?: boolean;
   setApiKey?: (key: string) => void;
@@ -17,48 +17,55 @@ const SUGGESTIONS = [
   {
     label: "Chorus",
     desc: "Stereo widening with rate & depth",
-    prompt: "Build a chorus audio effect. Use tapin~ 50 and tapout~ for a short delay line. Modulate the delay time with cycle~ LFO (Rate: 0.1–5 Hz via live.dial, default 0.5) scaled by Depth live.dial (0–5 ms, default 2). Mix dry + wet with +~ and normalize with *~ 0.5. Use plugin~ for stereo input (sum to mono with +~ and *~ 0.5), clip~ -1. 1. before plugout~.",
+    prompt: "Add a feedback knob and make the color blue",
+    template: "m4l_chorus",
   },
   {
     label: "Tremolo",
     desc: "Amplitude modulation",
-    prompt: "Build a tremolo audio effect. Use cycle~ as LFO, scale its output with *~ from Depth live.dial (0–1, default 0.5), offset with +~ so it ranges from (1-depth) to 1. Multiply the input signal by this LFO envelope using *~. Rate live.dial controls LFO frequency (0.1–20 Hz, default 4). Use plugin~ for stereo input (sum to mono), clip~ -1. 1. before plugout~.",
+    prompt: "Add a waveform selector (sine/square) and make the color green",
+    template: "m4l_tremolo",
   },
   {
     label: "3-Band EQ",
     desc: "Shape lows, mids & highs",
-    prompt: "Build a 3-band EQ audio effect. Split plugin~ input into 3 bands using lores~ filters: Low band (lores~ at 200 Hz), Mid band (subtract low from lores~ at 3000 Hz), High band (subtract mid+low from dry). Each band gets a gain *~ controlled by a live.dial (0–2, default 1). Sum all 3 bands with +~. clip~ -1. 1. before plugout~.",
+    prompt: "Add a Q control for each band",
+    template: "m4l_eq",
   },
   {
-    label: "Bitcrusher",
-    desc: "Lo-fi bit reduction & aliasing",
-    prompt: "Build a bitcrusher audio effect. Use degrade~ to reduce bit depth and sample rate. Bits live.dial (1–24, default 16) controls bit depth via degrade~ inlet 2. Rate live.dial (0.01–1, default 1) controls sample rate divisor via degrade~ inlet 1. Mix dry/wet using sig~ and *~ math: out = dry*(1-mix) + wet*mix, controlled by Mix live.dial (0–1, default 0.5). Use plugin~ input, clip~ -1. 1. before plugout~.",
+    label: "Lo-Fi",
+    desc: "Bit reduction & aliasing",
+    prompt: "Add a wet/dry mix knob",
+    template: "m4l_lofi",
   },
   {
     label: "Reverb",
     desc: "Room simulation with decay",
-    prompt: "Build a reverb audio effect. Create 4 parallel delay lines using tapin~ 5000 and tapout~ at prime-number times (23, 37, 53, 71 ms). Feed each tapout~ back through *~ 0.6 into the tapin~ input summer (+~). Sum all 4 tapout~ outputs with +~ and scale with *~ 0.25. Mix dry/wet with sig~ math: out = dry*(1-mix) + wet*mix. Decay live.dial (0.1–0.9, default 0.5) controls feedback gain. Mix live.dial (0–1, default 0.3). Use plugin~ input (sum to mono), clip~ -1. 1. before plugout~.",
+    prompt: "Add a pre-delay knob and make the color purple",
+    template: "m4l_reverb",
   },
   {
     label: "Delay",
     desc: "Stereo echo with feedback",
-    prompt: "Build a stereo delay audio effect. Use tapin~ 2000 and tapout~ for a single delay line. Time live.dial (10–1000 ms, default 300) sets tapout~ delay time via snapshot~ from sig~. Feedback live.dial (0–0.9, default 0.4) scales the tapout~ output with *~ and feeds it back to tapin~ input via +~. Mix live.dial (0–1, default 0.3) blends dry/wet using sig~ and *~ math. Use plugin~ input (sum to mono), clip~ -1. 1. before plugout~.",
+    prompt: "Add ping-pong stereo and a filter in the feedback loop",
+    template: "m4l_stereo_delay",
   },
   {
     label: "Distortion",
     desc: "Overdrive & saturation",
-    prompt: "Build a distortion audio effect. Multiply the plugin~ input by a Drive gain using *~ controlled by Drive live.dial (1–50, default 5). Then use clip~ -1. 1. to hard-clip the boosted signal for saturation. Optionally filter the clipped signal through lores~ at a Tone frequency controlled by Tone live.dial (500–15000 Hz, default 5000) to tame harshness. Mix dry/wet with sig~ math. Mix live.dial (0–1, default 0.7). Use plugin~ input (sum to mono), final clip~ -1. 1. before plugout~.",
+    prompt: "Build a distortion audio effect. Multiply the plugin~ input by a Drive gain using *~ controlled by Drive live.dial (1–50, default 5). Then use clip~ -1. 1. to hard-clip the boosted signal for saturation. Filter through lores~ with Tone live.dial (500–15000 Hz, default 5000). Mix dry/wet with sig~ math. Mix live.dial (0–1, default 0.7). Use plugin~ input (sum to mono), final clip~ -1. 1. before plugout~.",
   },
   {
     label: "Pitch Shift",
     desc: "Transpose up or down",
-    prompt: "Build a pitch shifter audio effect. Write the plugin~ input into a buffer~ using record~. Read it back with play~ at a different speed controlled by Shift live.dial (-12 to 12 semitones, default 0). Convert semitones to playback rate with expr pow(2, $f1/12). Use sig~ to convert the rate to signal for play~. Mix the pitch-shifted signal with the dry using *~ and +~, controlled by Mix live.dial (0–1, default 0.5). clip~ -1. 1. before plugout~.",
+    prompt: "Build a pitch shifter audio effect. Write the plugin~ input into a buffer~ using record~. Read it back with play~ at a different speed controlled by Shift live.dial (-12 to 12 semitones, default 0). Convert semitones to playback rate with expr pow(2, $f1/12). Use sig~ to convert the rate to signal for play~. Mix dry/wet with *~ and +~, controlled by Mix live.dial (0–1, default 0.5). clip~ -1. 1. before plugout~.",
   },
   // --- Instruments (device_type="instrument") ---
   {
     label: "Mono Synth",
     desc: "Classic subtractive mono",
-    prompt: "Build a mono synth M4L instrument. Use notein (place_raw, 3 outlets: note, velocity, channel). Convert note to frequency with mtof, then sig~ to feed cycle~ for a saw-like tone (use phasor~ for sawtooth). Filter through lores~ with Cutoff live.dial (100–15000 Hz, default 2000) and Resonance live.dial (0–1, default 0.3). For amplitude envelope: velocity outlet from notein → compare > 0 → select 1 0 → line~ (note-on: '0.8 10' for attack, note-off: '0. 300' for release). Multiply oscillator output by envelope with *~. clip~ -1. 1. before plugout~. Save with device_type='instrument'.",
+    prompt: "Add a filter envelope and a second oscillator (detuned saw)",
+    template: "m4l_mono_synth",
   },
   {
     label: "Bass Synth",
@@ -162,7 +169,7 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
                 <button
                   key={s.label}
                   className="suggestion-card"
-                  onClick={() => onSend(s.prompt)}
+                  onClick={() => onSend(s.prompt, (s as any).template)}
                 >
                   <span className="suggestion-label">{s.label}</span>
                   <span className="suggestion-desc">{s.desc}</span>

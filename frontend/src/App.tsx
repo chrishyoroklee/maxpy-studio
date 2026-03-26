@@ -10,9 +10,9 @@ function App() {
   const { messages, isLoading, sendMessage } = useChat();
   const embedded = useEmbedded();
 
-  const handleSend = (prompt: string) => {
+  const handleSend = (prompt: string, template?: string) => {
     if (!apiKey) return;
-    sendMessage(prompt, apiKey, model);
+    sendMessage(prompt, apiKey, model, template);
   };
 
   return (

@@ -25,7 +25,7 @@ export function useChat() {
   messagesRef.current = messages;
 
   const sendMessage = useCallback(
-    async (prompt: string, apiKey: string, model: string) => {
+    async (prompt: string, apiKey: string, model: string, template?: string) => {
       // Build conversation history from ref (no stale closure)
       const history = messagesRef.current.map((m) => ({
         role: m.role,
@@ -41,7 +41,7 @@ export function useChat() {
       const assistantId = assistantMsg.id;
 
       try {
-        for await (const event of streamGenerate(prompt, apiKey, model, history)) {
+        for await (const event of streamGenerate(prompt, apiKey, model, history, template)) {
           switch (event.type) {
             case "chunk":
               setMessages((prev) =>

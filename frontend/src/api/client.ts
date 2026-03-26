@@ -12,15 +12,19 @@ export async function* streamGenerate(
   prompt: string,
   apiKey: string,
   model: string,
-  messages: { role: string; content: string }[] = []
+  messages: { role: string; content: string }[] = [],
+  template?: string
 ): AsyncGenerator<GenerateEvent> {
+  const body: Record<string, unknown> = { prompt, model, messages };
+  if (template) body.template = template;
+
   const response = await fetch(`${API_BASE}/generate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-API-Key": apiKey,
     },
-    body: JSON.stringify({ prompt, model, messages }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
