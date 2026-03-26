@@ -24,6 +24,7 @@ TEMPLATE_META = {
     "m4l_mono_synth": {"label": "Mono Synth", "description": "Subtractive mono synthesizer", "type": "instrument"},
     "m4l_hihat": {"label": "Hi-Hat", "description": "Drum synthesis hi-hat", "type": "instrument"},
     "m4l_distortion": {"label": "Distortion", "description": "Tube screamer style overdrive", "type": "audio_effect"},
+    "m4l_bass_synth": {"label": "Bass Synth", "description": "Moog-inspired subtractive bass", "type": "instrument"},
 }
 
 

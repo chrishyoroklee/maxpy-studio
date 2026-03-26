@@ -70,8 +70,9 @@ const SUGGESTIONS = [
   },
   {
     label: "Bass Synth",
-    desc: "Thick sub bass",
-    prompt: "Build a bass synth M4L instrument. Use notein (place_raw). Convert note → mtof → sig~ to get frequency signal. Create 2 layers: cycle~ at the base frequency for sub, and phasor~ at the same frequency for grit. Mix them with *~ 0.7 and *~ 0.3 then +~. Filter through lores~ with Cutoff live.dial (50–3000 Hz, default 500) and Res live.dial (0–0.8, default 0.4). Amplitude envelope from velocity: > 0 → select 1 0 → line~ (attack '0.9 5', release '0. 200'). VCA with *~. clip~ -1. 1. before plugout~. Save with device_type='instrument'.",
+    desc: "Moog-style sub bass",
+    prompt: "Add a second saw oscillator detuned by 7 cents",
+    template: "m4l_bass_synth",
   },
   {
     label: "Electric Piano",
