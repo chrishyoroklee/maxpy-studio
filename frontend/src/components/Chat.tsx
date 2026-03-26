@@ -53,7 +53,8 @@ const SUGGESTIONS = [
   {
     label: "Distortion",
     desc: "Overdrive & saturation",
-    prompt: "Build a distortion audio effect. Multiply the plugin~ input by a Drive gain using *~ controlled by Drive live.dial (1–50, default 5). Then use clip~ -1. 1. to hard-clip the boosted signal for saturation. Filter through lores~ with Tone live.dial (500–15000 Hz, default 5000). Mix dry/wet with sig~ math. Mix live.dial (0–1, default 0.7). Use plugin~ input (sum to mono), final clip~ -1. 1. before plugout~.",
+    prompt: "Add a second distortion stage and make the color orange",
+    template: "m4l_distortion",
   },
   {
     label: "Pitch Shift",
