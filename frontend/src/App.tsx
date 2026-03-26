@@ -1,5 +1,6 @@
 import { ApiKeyInput } from "./components/ApiKeyInput";
 import { Chat } from "./components/Chat";
+import { Onboarding } from "./components/Onboarding";
 import { useApiKey } from "./hooks/useApiKey";
 import { useChat } from "./hooks/useChat";
 import { useEmbedded } from "./hooks/useEmbedded";
@@ -14,6 +15,15 @@ function App() {
     if (!apiKey) return;
     sendMessage(prompt, apiKey, model, template);
   };
+
+  // Full-screen onboarding when no API key (web only)
+  if (!apiKey && !embedded) {
+    return (
+      <div className="app">
+        <Onboarding setApiKey={setApiKey} model={model} setModel={setModel} />
+      </div>
+    );
+  }
 
   return (
     <div className={`app ${embedded ? "embedded" : ""}`}>

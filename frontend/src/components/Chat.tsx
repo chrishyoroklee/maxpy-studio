@@ -120,6 +120,7 @@ function downloadAmxd(b64: string, filename: string) {
 
 interface TemplateBuild {
   status: "building" | "done" | "error";
+  templateName: string;
   amxdB64?: string;
   generationId?: string;
   error?: string;
@@ -137,14 +138,24 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
     setSavedToDesktop(false);
   }, [messages.length]);
 
+  const [customizeInput, setCustomizeInput] = useState("");
+
   const handleTemplateBuild = async (templateName: string) => {
-    setTemplateBuild({ status: "building" });
+    setTemplateBuild({ status: "building", templateName });
     try {
       const result = await buildTemplate(templateName);
-      setTemplateBuild({ status: "done", amxdB64: result.amxd_b64, generationId: result.generation_id });
+      setTemplateBuild({ status: "done", templateName, amxdB64: result.amxd_b64, generationId: result.generation_id });
     } catch (err) {
-      setTemplateBuild({ status: "error", error: err instanceof Error ? err.message : "Build failed" });
+      setTemplateBuild({ status: "error", templateName, error: err instanceof Error ? err.message : "Build failed" });
     }
+  };
+
+  const handleCustomize = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customizeInput.trim() || !templateBuild) return;
+    onSend(customizeInput.trim(), templateBuild.templateName);
+    setCustomizeInput("");
+    setTemplateBuild(null);
   };
 
   useEffect(() => {
@@ -215,41 +226,56 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
               </div>
             )}
             {templateBuild.status === "done" && templateBuild.amxdB64 && (
-              <div className={embedded ? "" : "message-content"}>
-                {savedToDesktop ? (
-                  <span className="embedded-status-success">Link copied! Paste in browser.</span>
-                ) : (
-                  <>
-                    <span className={embedded ? "embedded-status-success" : ""} style={embedded ? undefined : { color: "var(--text-accent)" }}>Ready!</span>
-                    {" "}
-                    {templateBuild.generationId ? (
+              <div className="template-result">
+                <div className="template-result-header">
+                  <span className="template-result-label">Base template ready</span>
+                  <button
+                    className="download-button"
+                    onClick={() => {
+                      if (embedded && templateBuild.generationId) {
+                        navigator.clipboard.writeText(getDownloadUrl(templateBuild.generationId)).then(() => setSavedToDesktop(true));
+                      } else {
+                        downloadAmxd(templateBuild.amxdB64!, "device.amxd");
+                      }
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    {savedToDesktop ? "Link copied!" : "Download .amxd"}
+                  </button>
+                </div>
+                {!embedded && (
+                  <form className="template-customize" onSubmit={handleCustomize}>
+                    <label className="template-customize-label">Want to customize?</label>
+                    <div className="input-wrapper">
+                      <input
+                        type="text"
+                        value={customizeInput}
+                        onChange={(e) => setCustomizeInput(e.target.value)}
+                        placeholder="e.g. Add a feedback knob, change color to blue..."
+                        className="chat-input"
+                        style={{ minHeight: "auto" }}
+                      />
                       <button
-                        className="download-button"
-                        onClick={() => {
-                          if (embedded && templateBuild.generationId) {
-                            navigator.clipboard.writeText(getDownloadUrl(templateBuild.generationId)).then(() => setSavedToDesktop(true));
-                          } else {
-                            downloadAmxd(templateBuild.amxdB64!, "device.amxd");
-                          }
-                        }}
+                        type="submit"
+                        disabled={!customizeInput.trim() || isLoading}
+                        className="send-button"
+                        aria-label="Customize"
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                          <polyline points="7 10 12 15 17 10" />
-                          <line x1="12" y1="15" x2="12" y2="3" />
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                          <polyline points="12 5 19 12 12 19" />
                         </svg>
-                        Download .amxd
                       </button>
-                    ) : (
-                      <button className="download-button" onClick={() => downloadAmxd(templateBuild.amxdB64!, "device.amxd")}>
-                        Download .amxd
-                      </button>
-                    )}
-                    <button className="download-button" style={{ marginLeft: 8, background: "transparent", color: "var(--text-secondary)", boxShadow: "none", border: "1px solid var(--border-default)" }} onClick={() => setTemplateBuild(null)}>
-                      Back
-                    </button>
-                  </>
+                    </div>
+                  </form>
                 )}
+                <button className="template-back" onClick={() => { setTemplateBuild(null); setCustomizeInput(""); }}>
+                  Back to presets
+                </button>
               </div>
             )}
             {templateBuild.status === "error" && (

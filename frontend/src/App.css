@@ -515,6 +515,195 @@ body {
   50% { height: 16px; }
 }
 
+/* ==================== Onboarding ==================== */
+
+.onboarding {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--bg-base);
+  background-image: radial-gradient(ellipse 60% 40% at 50% 40%, rgba(134, 59, 255, 0.1), transparent);
+}
+
+.onboarding-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 380px;
+  width: 100%;
+  padding: 48px 36px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 20px;
+  animation: fadeUp 0.5s var(--ease-out) both;
+}
+
+.onboarding-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: contain;
+  margin-bottom: 20px;
+}
+
+.onboarding-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #e8e8f0 25%, #863bff 60%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.onboarding-subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.onboarding-label {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.onboarding-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: var(--font-body);
+  margin-bottom: 20px;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.onboarding-input:focus {
+  outline: none;
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.onboarding-input::placeholder {
+  color: var(--text-muted);
+}
+
+.onboarding-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-base);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-family: var(--font-body);
+  margin-bottom: 28px;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%234a4a65' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.onboarding-select:focus {
+  outline: none;
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.onboarding-select option {
+  background: #0f0f18;
+}
+
+.onboarding-button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #863bff, #6d28d9);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 15px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+  box-shadow: 0 4px 12px rgba(134, 59, 255, 0.25);
+}
+
+.onboarding-button:hover:not(:disabled) {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 20px rgba(134, 59, 255, 0.35);
+}
+
+.onboarding-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ==================== Template Result ==================== */
+
+.template-result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  max-width: 500px;
+  margin: 0 auto;
+  animation: fadeUp 0.35s var(--ease-out) both;
+}
+
+.template-result-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.template-result-label {
+  color: #4ade80;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.template-customize {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.template-customize-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.template-back {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  padding: 0;
+  align-self: flex-start;
+  transition: color 0.15s;
+}
+
+.template-back:hover {
+  color: var(--text-secondary);
+}
+
 /* ==================== Embedded Mode (M4L jweb) ==================== */
 
 .app.embedded {
