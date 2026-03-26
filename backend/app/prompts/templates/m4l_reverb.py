@@ -297,12 +297,12 @@ title = place_raw({
 patcher_json = patch.get_json()
 patcher_json["patcher"]["openinpresentation"] = 1
 
-with open("examples/m4l_reverb.maxpat", "w") as f:
+with open("device.maxpat", "w") as f:
     json.dump(patcher_json, f, indent=2)
 print("Saved: examples/m4l_reverb.maxpat")
 
 from amxd import save_amxd
-save_amxd(patcher_json, "examples/m4l_reverb.amxd", device_type="audio_effect")
+save_amxd(patcher_json, "device.amxd", device_type="audio_effect")
 print("Saved: examples/m4l_reverb.amxd")
 
 print(f"Total objects: {patch.num_objs}")

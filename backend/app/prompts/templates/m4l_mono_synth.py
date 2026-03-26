@@ -154,11 +154,11 @@ patch.place("comment Drag this .maxpat onto a MIDI track in Ableton Live")[0]
 # SAVE
 # ============================================================
 
-patch.save("examples/m4l_mono_synth.maxpat")
+patch.save("device.maxpat")
 print("Saved: examples/m4l_mono_synth.maxpat")
 
 from amxd import save_amxd
-save_amxd(patch.get_json(), "examples/m4l_mono_synth.amxd", device_type="instrument")
+save_amxd(patch.get_json(), "device.amxd", device_type="instrument")
 print("Saved: examples/m4l_mono_synth.amxd")
 
 print(f"Total objects: {patch.num_objs}")
