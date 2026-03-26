@@ -65,3 +65,15 @@ export async function* streamGenerate(
 export function getDownloadUrl(generationId: string): string {
   return `${API_BASE}/download/${generationId}`;
 }
+
+export async function buildTemplate(
+  name: string
+): Promise<{ generation_id: string; amxd_b64: string }> {
+  const response = await fetch(`${API_BASE}/templates/${name}/build`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}

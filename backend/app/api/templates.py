@@ -1,8 +1,14 @@
-"""GET /api/templates — list and retrieve base device templates."""
+"""Templates API — list, retrieve, and build base device templates."""
 
+import base64
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
+
+from app.core.sandbox import execute, SandboxError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -37,3 +43,27 @@ async def get_template(name: str):
     if not path.exists() or name not in TEMPLATE_META:
         raise HTTPException(status_code=404, detail=f"Template '{name}' not found")
     return {"name": name, "code": path.read_text(), **TEMPLATE_META[name]}
+
+
+@router.post("/templates/{name}/build")
+async def build_template(name: str):
+    """Execute a template directly and return the .amxd (no LLM)."""
+    path = TEMPLATES_DIR / f"{name}.py"
+    if not path.exists() or name not in TEMPLATE_META:
+        raise HTTPException(status_code=404, detail=f"Template '{name}' not found")
+
+    code = path.read_text()
+    try:
+        result = execute(code)
+        amxd_file = result.files.get("amxd")
+        if not amxd_file or not amxd_file.exists():
+            raise HTTPException(status_code=500, detail="No .amxd generated")
+        amxd_b64 = base64.b64encode(amxd_file.read_bytes()).decode("ascii")
+        return {
+            "generation_id": result.generation_id,
+            "amxd_b64": amxd_b64,
+            "stdout": result.stdout,
+        }
+    except SandboxError as e:
+        logger.error("Template build failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))

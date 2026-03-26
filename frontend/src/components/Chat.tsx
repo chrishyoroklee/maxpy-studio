@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { ChatMessage } from "../hooks/useChat";
-import { getDownloadUrl } from "../api/client";
+import { getDownloadUrl, buildTemplate } from "../api/client";
 
 interface Props {
   messages: ChatMessage[];
@@ -118,9 +118,17 @@ function downloadAmxd(b64: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+interface TemplateBuild {
+  status: "building" | "done" | "error";
+  amxdB64?: string;
+  generationId?: string;
+  error?: string;
+}
+
 export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiKey, model, setModel }: Props) {
   const [input, setInput] = useState("");
   const [savedToDesktop, setSavedToDesktop] = useState(false);
+  const [templateBuild, setTemplateBuild] = useState<TemplateBuild | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -128,6 +136,16 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
   useEffect(() => {
     setSavedToDesktop(false);
   }, [messages.length]);
+
+  const handleTemplateBuild = async (templateName: string) => {
+    setTemplateBuild({ status: "building" });
+    try {
+      const result = await buildTemplate(templateName);
+      setTemplateBuild({ status: "done", amxdB64: result.amxd_b64, generationId: result.generation_id });
+    } catch (err) {
+      setTemplateBuild({ status: "error", error: err instanceof Error ? err.message : "Build failed" });
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -160,7 +178,7 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
     <div className="chat-container">
 
       <div className="messages">
-        {messages.length === 0 && (
+        {messages.length === 0 && !templateBuild && (
           <div className="welcome">
             <h2>MaxPyLang Studio</h2>
             <p>Describe a plugin. Get an .amxd for Ableton.</p>
@@ -169,13 +187,79 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
                 <button
                   key={s.label}
                   className="suggestion-card"
-                  onClick={() => onSend(s.prompt, (s as any).template)}
+                  onClick={() => {
+                    const tmpl = (s as any).template as string | undefined;
+                    if (tmpl) {
+                      handleTemplateBuild(tmpl);
+                    } else {
+                      onSend(s.prompt);
+                    }
+                  }}
                 >
                   <span className="suggestion-label">{s.label}</span>
                   <span className="suggestion-desc">{s.desc}</span>
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {templateBuild && (
+          <div className={embedded ? "embedded-status" : "message assistant"}>
+            {templateBuild.status === "building" && (
+              <div className={embedded ? "" : "message-content"}>
+                <div className="loading-indicator">
+                  <div className="loading-bars"><span /><span /><span /></div>
+                  <span>Building...</span>
+                </div>
+              </div>
+            )}
+            {templateBuild.status === "done" && templateBuild.amxdB64 && (
+              <div className={embedded ? "" : "message-content"}>
+                {savedToDesktop ? (
+                  <span className="embedded-status-success">Link copied! Paste in browser.</span>
+                ) : (
+                  <>
+                    <span className={embedded ? "embedded-status-success" : ""} style={embedded ? undefined : { color: "var(--text-accent)" }}>Ready!</span>
+                    {" "}
+                    {templateBuild.generationId ? (
+                      <button
+                        className="download-button"
+                        onClick={() => {
+                          if (embedded && templateBuild.generationId) {
+                            navigator.clipboard.writeText(getDownloadUrl(templateBuild.generationId)).then(() => setSavedToDesktop(true));
+                          } else {
+                            downloadAmxd(templateBuild.amxdB64!, "device.amxd");
+                          }
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Download .amxd
+                      </button>
+                    ) : (
+                      <button className="download-button" onClick={() => downloadAmxd(templateBuild.amxdB64!, "device.amxd")}>
+                        Download .amxd
+                      </button>
+                    )}
+                    <button className="download-button" style={{ marginLeft: 8, background: "transparent", color: "var(--text-secondary)", boxShadow: "none", border: "1px solid var(--border-default)" }} onClick={() => setTemplateBuild(null)}>
+                      Back
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            {templateBuild.status === "error" && (
+              <div className={embedded ? "" : "message-content"}>
+                <span style={{ color: "var(--error)" }}>Error: {templateBuild.error}</span>
+                <button className="download-button" style={{ marginLeft: 8, background: "transparent", color: "var(--text-secondary)", boxShadow: "none", border: "1px solid var(--border-default)" }} onClick={() => setTemplateBuild(null)}>
+                  Back
+                </button>
+              </div>
+            )}
           </div>
         )}
 
