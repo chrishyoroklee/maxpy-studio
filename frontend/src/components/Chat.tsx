@@ -56,6 +56,12 @@ const SUGGESTIONS = [
     prompt: "Add a second distortion stage and make the color orange",
     template: "m4l_distortion",
   },
+  {
+    label: "Compressor",
+    desc: "Bus glue & dynamics",
+    prompt: "Add a ratio control and sidechain input",
+    template: "m4l_compressor",
+  },
   // --- Instruments (device_type="instrument") ---
   {
     label: "Mono Synth",
