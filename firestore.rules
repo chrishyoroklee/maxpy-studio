@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /prompts/{promptId} {
+      allow read, write: if true;
+    }
+    match /generations/{generationId} {
+      allow read, write: if true;
+    }
+  }
+}
