@@ -1,29 +1,28 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000/api";
+const FUNCTIONS_BASE = import.meta.env.VITE_FUNCTIONS_BASE ?? "http://127.0.0.1:5001/maxpylang-studio/us-central1";
 
 export interface GenerateEvent {
-  type: "chunk" | "code_extracted" | "status" | "success" | "error" | "done";
+  type: "chunk" | "error" | "done";
   content?: string;
-  generation_id?: string;
-  stdout?: string;
-  amxd_b64?: string;
 }
 
-export async function* streamGenerate(
+/**
+ * Stream LLM response from the Cloud Function.
+ * Code extraction + execution now happens client-side via Pyodide.
+ */
+export async function* streamLLM(
   prompt: string,
-  apiKey: string,
   model: string,
   messages: { role: string; content: string }[] = [],
-  template?: string
+  template?: string,
+  templateCode?: string,
 ): AsyncGenerator<GenerateEvent> {
   const body: Record<string, unknown> = { prompt, model, messages };
   if (template) body.template = template;
+  if (templateCode) body.templateCode = templateCode;
 
-  const response = await fetch(`${API_BASE}/generate`, {
+  const response = await fetch(`${FUNCTIONS_BASE}/generateCode`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": apiKey,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
@@ -60,20 +59,4 @@ export async function* streamGenerate(
   } finally {
     reader.releaseLock();
   }
-}
-
-export function getDownloadUrl(generationId: string): string {
-  return `${API_BASE}/download/${generationId}`;
-}
-
-export async function buildTemplate(
-  name: string
-): Promise<{ generation_id: string; amxd_b64: string }> {
-  const response = await fetch(`${API_BASE}/templates/${name}/build`, {
-    method: "POST",
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-  return response.json();
 }
