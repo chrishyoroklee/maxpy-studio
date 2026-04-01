@@ -1,133 +1,68 @@
 import { useState, useRef, useEffect } from "react";
 import type { ChatMessage } from "../hooks/useChat";
-import { getDownloadUrl, buildTemplate } from "../api/client";
+import { downloadBlob } from "../lib/download";
+import { fetchTemplateCode } from "../lib/templates";
+import { rewriteSavePaths } from "../lib/pathRewriter";
 
 interface Props {
   messages: ChatMessage[];
   isLoading: boolean;
   onSend: (prompt: string, template?: string) => void;
-  apiKeySet: boolean;
+  pyodideReady: boolean;
   embedded?: boolean;
-  setApiKey?: (key: string) => void;
   model?: string;
   setModel?: (model: string) => void;
+  runCode: (code: string) => Promise<{
+    success: boolean;
+    stdout: string;
+    stderr: string;
+    amxdBytes: Uint8Array | null;
+  }>;
 }
 
 const SUGGESTIONS = [
-  {
-    label: "Chorus",
-    desc: "Stereo widening with rate & depth",
-    prompt: "Add a feedback knob and make the color blue",
-    template: "m4l_chorus",
-  },
-  {
-    label: "Tremolo",
-    desc: "Amplitude modulation",
-    prompt: "Add a waveform selector (sine/square) and make the color green",
-    template: "m4l_tremolo",
-  },
-  {
-    label: "3-Band EQ",
-    desc: "Shape lows, mids & highs",
-    prompt: "Add a Q control for each band",
-    template: "m4l_eq",
-  },
-  {
-    label: "Lo-Fi",
-    desc: "Bit reduction & aliasing",
-    prompt: "Add a wet/dry mix knob",
-    template: "m4l_lofi",
-  },
-  {
-    label: "Reverb",
-    desc: "Room simulation with decay",
-    prompt: "Add a pre-delay knob and make the color purple",
-    template: "m4l_reverb",
-  },
-  {
-    label: "Delay",
-    desc: "Stereo echo with feedback",
-    prompt: "Add ping-pong stereo and a filter in the feedback loop",
-    template: "m4l_stereo_delay",
-  },
-  {
-    label: "Distortion",
-    desc: "Overdrive & saturation",
-    prompt: "Add a second distortion stage and make the color orange",
-    template: "m4l_distortion",
-  },
-  {
-    label: "Compressor",
-    desc: "Bus glue & dynamics",
-    prompt: "Add a ratio control and sidechain input",
-    template: "m4l_compressor",
-  },
-  // --- Instruments (device_type="instrument") ---
-  {
-    label: "Mono Synth",
-    desc: "Classic subtractive mono",
-    prompt: "Add a filter envelope and a second oscillator (detuned saw)",
-    template: "m4l_mono_synth",
-  },
-  {
-    label: "Bass Synth",
-    desc: "Moog-style sub bass",
-    prompt: "Add a second saw oscillator detuned by 7 cents",
-    template: "m4l_bass_synth",
-  },
+  { label: "Chorus", desc: "Stereo widening with rate & depth", prompt: "Add a feedback knob and make the color blue", template: "m4l_chorus" },
+  { label: "Tremolo", desc: "Amplitude modulation", prompt: "Add a waveform selector (sine/square) and make the color green", template: "m4l_tremolo" },
+  { label: "3-Band EQ", desc: "Shape lows, mids & highs", prompt: "Add a Q control for each band", template: "m4l_eq" },
+  { label: "Lo-Fi", desc: "Bit reduction & aliasing", prompt: "Add a wet/dry mix knob", template: "m4l_lofi" },
+  { label: "Reverb", desc: "Room simulation with decay", prompt: "Add a pre-delay knob and make the color purple", template: "m4l_reverb" },
+  { label: "Delay", desc: "Stereo echo with feedback", prompt: "Add ping-pong stereo and a filter in the feedback loop", template: "m4l_stereo_delay" },
+  { label: "Distortion", desc: "Overdrive & saturation", prompt: "Add a second distortion stage and make the color orange", template: "m4l_distortion" },
+  { label: "Compressor", desc: "Bus glue & dynamics", prompt: "Add a ratio control and sidechain input", template: "m4l_compressor" },
+  { label: "Mono Synth", desc: "Classic subtractive mono", prompt: "Add a filter envelope and a second oscillator (detuned saw)", template: "m4l_mono_synth" },
+  { label: "Bass Synth", desc: "Moog-style sub bass", prompt: "Add a second saw oscillator detuned by 7 cents", template: "m4l_bass_synth" },
 ];
 
 const MODELS = [
   { value: "claude-sonnet-4-20250514", label: "Sonnet 4" },
   { value: "claude-opus-4-20250514", label: "Opus 4" },
-  { value: "gpt-4o", label: "GPT-4o" },
-  { value: "gpt-4o-mini", label: "4o Mini" },
-  { value: "gemini/gemini-2.5-pro-preview-06-05", label: "Gemini 2.5 Pro" },
-  { value: "gemini/gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash" },
-  { value: "deepseek/deepseek-chat", label: "DeepSeek V3" },
-  { value: "mistral/mistral-large-latest", label: "Mistral Large" },
 ];
-
-function downloadAmxd(b64: string, filename: string) {
-  const bytes = atob(b64);
-  const arr = new Uint8Array(bytes.length);
-  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-  const blob = new Blob([arr], { type: "application/octet-stream" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 interface TemplateBuild {
   status: "building" | "done" | "error";
   templateName: string;
-  amxdB64?: string;
-  generationId?: string;
+  amxdBytes?: Uint8Array;
   error?: string;
 }
 
-export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiKey, model, setModel }: Props) {
+export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, model, setModel, runCode }: Props) {
   const [input, setInput] = useState("");
-  const [savedToDesktop, setSavedToDesktop] = useState(false);
   const [templateBuild, setTemplateBuild] = useState<TemplateBuild | null>(null);
+  const [customizeInput, setCustomizeInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Reset saved state when new messages arrive
-  useEffect(() => {
-    setSavedToDesktop(false);
-  }, [messages.length]);
-
-  const [customizeInput, setCustomizeInput] = useState("");
 
   const handleTemplateBuild = async (templateName: string) => {
     setTemplateBuild({ status: "building", templateName });
     try {
-      const result = await buildTemplate(templateName);
-      setTemplateBuild({ status: "done", templateName, amxdB64: result.amxd_b64, generationId: result.generation_id });
+      const code = await fetchTemplateCode(templateName);
+      const rewritten = rewriteSavePaths(code);
+      const result = await runCode(rewritten);
+      if (result.success && result.amxdBytes) {
+        setTemplateBuild({ status: "done", templateName, amxdBytes: result.amxdBytes });
+      } else {
+        setTemplateBuild({ status: "error", templateName, error: result.stderr || "Build failed" });
+      }
     } catch (err) {
       setTemplateBuild({ status: "error", templateName, error: err instanceof Error ? err.message : "Build failed" });
     }
@@ -155,22 +90,13 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    // In embedded mode, first submission sets the API key
-    if (embedded && !apiKeySet) {
-      setApiKey?.(input.trim());
-      setInput("");
-      return;
-    }
-
+    if (!input.trim() || isLoading || !pyodideReady) return;
     onSend(input.trim());
     setInput("");
   };
 
   return (
     <div className="chat-container">
-
       <div className="messages">
         {messages.length === 0 && !templateBuild && (
           <div className="welcome">
@@ -181,14 +107,8 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
                 <button
                   key={s.label}
                   className="suggestion-card"
-                  onClick={() => {
-                    const tmpl = (s as any).template as string | undefined;
-                    if (tmpl) {
-                      handleTemplateBuild(tmpl);
-                    } else {
-                      onSend(s.prompt);
-                    }
-                  }}
+                  disabled={!pyodideReady}
+                  onClick={() => handleTemplateBuild(s.template)}
                 >
                   <span className="suggestion-label">{s.label}</span>
                   <span className="suggestion-desc">{s.desc}</span>
@@ -208,26 +128,20 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
                 </div>
               </div>
             )}
-            {templateBuild.status === "done" && templateBuild.amxdB64 && (
+            {templateBuild.status === "done" && templateBuild.amxdBytes && (
               <div className="template-result">
                 <div className="template-result-header">
                   <span className="template-result-label">Base template ready</span>
                   <button
                     className="download-button"
-                    onClick={() => {
-                      if (embedded && templateBuild.generationId) {
-                        navigator.clipboard.writeText(getDownloadUrl(templateBuild.generationId)).then(() => setSavedToDesktop(true));
-                      } else {
-                        downloadAmxd(templateBuild.amxdB64!, "device.amxd");
-                      }
-                    }}
+                    onClick={() => downloadBlob(templateBuild.amxdBytes!, "device.amxd")}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                       <polyline points="7 10 12 15 17 10" />
                       <line x1="12" y1="15" x2="12" y2="3" />
                     </svg>
-                    {savedToDesktop ? "Link copied!" : "Download .amxd"}
+                    Download .amxd
                   </button>
                 </div>
                 {!embedded && (
@@ -287,34 +201,20 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
                   <span style={{ color: "var(--error)" }}>Error: {lastAssistant.error}</span>
                 </div>
               );
-              if (lastAssistant?.amxdB64) return (
+              if (lastAssistant?.amxdBytes) return (
                 <div className="embedded-status">
-                  {savedToDesktop ? (
-                    <span className="embedded-status-success">Link copied! Paste in browser.</span>
-                  ) : (
-                    <>
-                      <span className="embedded-status-success">Created!</span>
-                      <button
-                        className="download-button"
-                        onClick={() => {
-                          if (lastAssistant.generationId) {
-                            const url = getDownloadUrl(lastAssistant.generationId);
-                            navigator.clipboard.writeText(url).then(() => {
-                              setSavedToDesktop(true);
-                            });
-                          } else {
-                            downloadAmxd(lastAssistant.amxdB64!, "device.amxd");
-                          }
-                        }}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                        </svg>
-                        Copy Link
-                      </button>
-                    </>
-                  )}
+                  <span className="embedded-status-success">Created!</span>
+                  <button
+                    className="download-button"
+                    onClick={() => downloadBlob(lastAssistant.amxdBytes!, "device.amxd")}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download .amxd
+                  </button>
                 </div>
               );
               return null;
@@ -332,10 +232,10 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
                   {msg.error && (
                     <div className="message-error">{msg.error}</div>
                   )}
-                  {msg.amxdB64 && (
+                  {msg.amxdBytes && (
                     <button
                       className="download-button"
-                      onClick={() => downloadAmxd(msg.amxdB64!, "device.amxd")}
+                      onClick={() => downloadBlob(msg.amxdBytes!, "device.amxd")}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -364,16 +264,6 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
 
       <form onSubmit={handleSubmit} className="input-form">
         <div className="input-wrapper">
-          {embedded && apiKeySet && (
-            <button
-              type="button"
-              className="key-reset"
-              onClick={() => { setApiKey?.(""); }}
-              title="Change API key"
-            >
-              Key
-            </button>
-          )}
           <textarea
             ref={textareaRef}
             value={input}
@@ -384,16 +274,12 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
                 handleSubmit(e);
               }
             }}
-            placeholder={
-              embedded
-                ? (apiKeySet ? "Describe a plugin..." : "Paste your API key...")
-                : (apiKeySet ? "Describe the plugin you want..." : "Enter your API key above first")
-            }
-            disabled={(!embedded && !apiKeySet) || isLoading}
+            placeholder={pyodideReady ? "Describe the plugin you want..." : "Loading Python runtime..."}
+            disabled={!pyodideReady || isLoading}
             rows={1}
             className="chat-input"
           />
-          {embedded && apiKeySet && (
+          {embedded && (
             <select
               value={model ?? "claude-sonnet-4-20250514"}
               onChange={(e) => setModel?.(e.target.value)}
@@ -406,7 +292,7 @@ export function Chat({ messages, isLoading, onSend, apiKeySet, embedded, setApiK
           )}
           <button
             type="submit"
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || !input.trim() || !pyodideReady}
             className="send-button"
             aria-label="Generate"
           >

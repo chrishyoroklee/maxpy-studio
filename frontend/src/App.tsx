@@ -1,26 +1,41 @@
-import { ApiKeyInput } from "./components/ApiKeyInput";
 import { Chat } from "./components/Chat";
 import { Onboarding } from "./components/Onboarding";
-import { useApiKey } from "./hooks/useApiKey";
 import { useChat } from "./hooks/useChat";
 import { useEmbedded } from "./hooks/useEmbedded";
+import { usePyodide } from "./hooks/usePyodide";
+import { useState } from "react";
 import "./App.css";
 
 function App() {
-  const { apiKey, setApiKey, model, setModel } = useApiKey();
-  const { messages, isLoading, sendMessage } = useChat();
   const embedded = useEmbedded();
+  const { ready, loading, error: pyodideError, runCode } = usePyodide();
+  const { messages, isLoading, sendMessage } = useChat(runCode);
+  const [onboarded, setOnboarded] = useState(() => {
+    return embedded || sessionStorage.getItem("maxpy-onboarded") === "true";
+  });
 
-  const handleSend = (prompt: string, template?: string) => {
-    if (!apiKey) return;
-    sendMessage(prompt, apiKey, model, template);
+  const [model, setModel] = useState(
+    () => sessionStorage.getItem("maxpy-model") ?? "claude-sonnet-4-20250514"
+  );
+
+  const handleModelChange = (m: string) => {
+    setModel(m);
+    sessionStorage.setItem("maxpy-model", m);
   };
 
-  // Full-screen onboarding when no API key (web only)
-  if (!apiKey && !embedded) {
+  const handleSend = (prompt: string, template?: string) => {
+    sendMessage(prompt, model, template);
+  };
+
+  const handleOnboarded = () => {
+    setOnboarded(true);
+    sessionStorage.setItem("maxpy-onboarded", "true");
+  };
+
+  if (!onboarded) {
     return (
       <div className="app">
-        <Onboarding setApiKey={setApiKey} model={model} setModel={setModel} />
+        <Onboarding onComplete={handleOnboarded} />
       </div>
     );
   }
@@ -33,24 +48,37 @@ function App() {
             <img src="/logo.webp" alt="" className="header-logo" />
             <h1>MaxPyLang Studio</h1>
           </div>
-          <ApiKeyInput
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            model={model}
-            setModel={setModel}
-          />
+          <select
+            value={model}
+            onChange={(e) => handleModelChange(e.target.value)}
+            className="model-select"
+          >
+            <option value="claude-sonnet-4-20250514">Sonnet 4</option>
+            <option value="claude-opus-4-20250514">Opus 4</option>
+          </select>
         </header>
       )}
       <main className="main">
+        {loading && (
+          <div className="pyodide-loading">
+            <div className="loading-bars"><span /><span /><span /></div>
+            <span>Loading Python runtime...</span>
+          </div>
+        )}
+        {pyodideError && (
+          <div className="pyodide-error">
+            Failed to load Python runtime: {pyodideError}
+          </div>
+        )}
         <Chat
           messages={messages}
           isLoading={isLoading}
           onSend={handleSend}
-          apiKeySet={!!apiKey}
+          pyodideReady={ready}
           embedded={embedded}
-          setApiKey={setApiKey}
           model={model}
-          setModel={setModel}
+          setModel={handleModelChange}
+          runCode={runCode}
         />
       </main>
     </div>
