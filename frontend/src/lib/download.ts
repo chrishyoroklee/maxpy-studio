@@ -2,7 +2,7 @@
  * Trigger a browser download from raw bytes.
  */
 export function downloadBlob(bytes: Uint8Array, filename: string): void {
-  const blob = new Blob([bytes], { type: "application/octet-stream" });
+  const blob = new Blob([new Uint8Array(bytes)], { type: "application/octet-stream" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

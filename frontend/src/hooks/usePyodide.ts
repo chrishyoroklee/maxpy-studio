@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { loadPyodide, PyodideInterface } from "pyodide";
+import { loadPyodide, type PyodideInterface } from "pyodide";
 
 interface PyodideState {
   ready: boolean;
