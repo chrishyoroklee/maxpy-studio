@@ -3,6 +3,7 @@ import { streamLLM } from "../api/client";
 import { extractCode, ExtractionError } from "../lib/extractor";
 import { rewriteSavePaths } from "../lib/pathRewriter";
 import { fetchTemplateCode } from "../lib/templates";
+import { savePrompt, saveGeneration } from "../lib/firestore";
 
 export interface ChatMessage {
   id: string;
@@ -42,6 +43,9 @@ export function useChat(runCode: RunCodeFn) {
       const assistantMsg: ChatMessage = { id: nextId(), role: "assistant", content: "" };
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsLoading(true);
+
+      // Log prompt to Firestore (fire and forget)
+      const promptId = await savePrompt({ prompt, model, templateUsed: template }).catch(() => "");
 
       const assistantId = assistantMsg.id;
 
@@ -104,6 +108,12 @@ export function useChat(runCode: RunCodeFn) {
               m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes! } : m
             )
           );
+          saveGeneration({
+            promptId,
+            llmResponse: fullResponse,
+            extractedCode: rewritten,
+            status: "success",
+          }).catch(() => {});
         } else {
           setMessages((prev) =>
             prev.map((m) =>
@@ -112,6 +122,13 @@ export function useChat(runCode: RunCodeFn) {
                 : m
             )
           );
+          saveGeneration({
+            promptId,
+            llmResponse: fullResponse,
+            extractedCode: rewritten,
+            status: "error",
+            errorMessage: result.stderr,
+          }).catch(() => {});
         }
       } catch (err) {
         setMessages((prev) =>
