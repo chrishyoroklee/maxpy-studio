@@ -28,3 +28,4 @@ generated/
 .DS_Store
 firestore-debug.log
 ui-debug.log
+.superpowers/
