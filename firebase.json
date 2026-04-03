@@ -15,5 +15,19 @@
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "emulators": {
+    "functions": {
+      "port": 5055
+    },
+    "firestore": {
+      "port": 8181
+    },
+    "ui": {
+      "port": 4002
+    },
+    "hub": {
+      "port": 4450
+    }
   }
 }
