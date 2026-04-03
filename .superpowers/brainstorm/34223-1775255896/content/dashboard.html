@@ -1,0 +1,134 @@
+<h2>Dashboard / Profile Page</h2>
+<p class="subtitle">Full page view — replaces chat when user clicks avatar in header</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">Dashboard</div>
+    <div class="mockup-body" style="background: #0a0a1a; padding: 0; font-family: system-ui;">
+
+      <!-- Header bar -->
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: #111827; border-bottom: 1px solid #1f2937;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 18px; font-weight: 700; font-style: italic; color: #e2e8f0;">Max<span style="color: #7c3aed;">Py</span>Lang Studio</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <span style="color: #7c3aed; font-size: 13px; cursor: pointer; font-weight: 500;">&#8592; Back to Studio</span>
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: 600;">H</div>
+        </div>
+      </div>
+
+      <!-- Dashboard content -->
+      <div style="padding: 32px; max-width: 900px; margin: 0 auto;">
+
+        <!-- Profile card -->
+        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 32px; padding: 24px; background: #111827; border-radius: 12px; border: 1px solid #1f2937;">
+          <div style="width: 64px; height: 64px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; font-weight: 600; flex-shrink: 0;">H</div>
+          <div style="flex: 1;">
+            <div style="color: #e2e8f0; font-size: 20px; font-weight: 600;">hyorok</div>
+            <div style="color: #64748b; font-size: 14px;">hyorok@example.com</div>
+            <div style="color: #64748b; font-size: 12px; margin-top: 4px;">Joined April 2026</div>
+          </div>
+          <button style="padding: 8px 16px; background: transparent; border: 1px solid #374151; border-radius: 8px; color: #94a3b8; font-size: 13px; cursor: pointer;">Sign Out</button>
+        </div>
+
+        <!-- Stats row -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px;">
+          <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="color: #7c3aed; font-size: 32px; font-weight: 700;">47</div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Total Generations</div>
+          </div>
+          <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="color: #22c55e; font-size: 32px; font-weight: 700;">83%</div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Success Rate</div>
+          </div>
+          <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="color: #f59e0b; font-size: 32px; font-weight: 700;">5</div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Favorites</div>
+          </div>
+        </div>
+
+        <!-- Generation history -->
+        <div style="margin-bottom: 32px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+            <h3 style="color: #e2e8f0; font-size: 16px; font-weight: 600; margin: 0;">Generation History</h3>
+            <select style="background: #1f2937; border: 1px solid #374151; border-radius: 6px; color: #94a3b8; padding: 4px 8px; font-size: 12px;">
+              <option>All</option>
+              <option>Successful</option>
+              <option>Failed</option>
+            </select>
+          </div>
+
+          <!-- History items -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+
+            <div style="display: flex; align-items: center; gap: 16px; padding: 16px; background: #111827; border: 1px solid #1f2937; border-radius: 10px;">
+              <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0;"></div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="color: #e2e8f0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Add a feedback knob and make the color blue</div>
+                <div style="color: #64748b; font-size: 12px; margin-top: 2px;">Chorus template &middot; 2 hours ago</div>
+              </div>
+              <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                <button style="padding: 6px 10px; background: transparent; border: 1px solid #374151; border-radius: 6px; color: #94a3b8; font-size: 12px; cursor: pointer;" title="Favorite">&#9734;</button>
+                <button style="padding: 6px 10px; background: #7c3aed; border: none; border-radius: 6px; color: white; font-size: 12px; cursor: pointer;">Download</button>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 16px; padding: 16px; background: #111827; border: 1px solid #1f2937; border-radius: 10px;">
+              <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0;"></div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="color: #e2e8f0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Make me a simple tremolo with a speed knob</div>
+                <div style="color: #64748b; font-size: 12px; margin-top: 2px;">From scratch &middot; 5 hours ago</div>
+              </div>
+              <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                <button style="padding: 6px 10px; background: transparent; border: 1px solid #7c3aed; border-radius: 6px; color: #7c3aed; font-size: 12px; cursor: pointer;" title="Favorited">&#9733;</button>
+                <button style="padding: 6px 10px; background: #7c3aed; border: none; border-radius: 6px; color: white; font-size: 12px; cursor: pointer;">Download</button>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 16px; padding: 16px; background: #111827; border: 1px solid #1f2937; border-radius: 10px;">
+              <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0;"></div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="color: #e2e8f0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Build a granular synthesizer with 8 voices</div>
+                <div style="color: #64748b; font-size: 12px; margin-top: 2px;">From scratch &middot; Yesterday</div>
+              </div>
+              <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                <button style="padding: 6px 10px; background: transparent; border: 1px solid #374151; border-radius: 6px; color: #94a3b8; font-size: 12px; cursor: pointer;" title="Favorite">&#9734;</button>
+                <span style="padding: 6px 10px; color: #ef4444; font-size: 12px;">Failed</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Account settings -->
+        <div>
+          <h3 style="color: #e2e8f0; font-size: 16px; font-weight: 600; margin-bottom: 16px;">Account Settings</h3>
+          <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #1f2937; margin-bottom: 16px;">
+              <div>
+                <div style="color: #e2e8f0; font-size: 14px;">Display Name</div>
+                <div style="color: #64748b; font-size: 13px;">hyorok</div>
+              </div>
+              <button style="padding: 6px 12px; background: transparent; border: 1px solid #374151; border-radius: 6px; color: #94a3b8; font-size: 12px; cursor: pointer;">Edit</button>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #1f2937; margin-bottom: 16px;">
+              <div>
+                <div style="color: #e2e8f0; font-size: 14px;">Default Model</div>
+                <div style="color: #64748b; font-size: 13px;">Claude Sonnet 4</div>
+              </div>
+              <button style="padding: 6px 12px; background: transparent; border: 1px solid #374151; border-radius: 6px; color: #94a3b8; font-size: 12px; cursor: pointer;">Change</button>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div style="color: #ef4444; font-size: 14px;">Delete Account</div>
+                <div style="color: #64748b; font-size: 13px;">Permanently delete your account and all data</div>
+              </div>
+              <button style="padding: 6px 12px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; color: #ef4444; font-size: 12px; cursor: pointer;">Delete</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

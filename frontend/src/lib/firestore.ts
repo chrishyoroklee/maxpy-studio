@@ -1,5 +1,6 @@
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
+import { auth } from "./firebase";
 
 function getSessionId(): string {
   let id = sessionStorage.getItem("maxpy-session-id");
@@ -17,7 +18,7 @@ export async function savePrompt(data: {
 }): Promise<string> {
   const docRef = await addDoc(collection(db, "prompts"), {
     ...data,
-    uid: null,
+    uid: auth.currentUser?.uid ?? null,
     sessionId: getSessionId(),
     createdAt: serverTimestamp(),
   });
@@ -33,7 +34,7 @@ export async function saveGeneration(data: {
 }): Promise<string> {
   const docRef = await addDoc(collection(db, "generations"), {
     ...data,
-    uid: null,
+    uid: auth.currentUser?.uid ?? null,
     amxdStoragePath: null,
     createdAt: serverTimestamp(),
   });

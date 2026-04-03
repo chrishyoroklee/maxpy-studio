@@ -1338,3 +1338,23 @@ body {
 .dashboard-btn-danger:hover {
   background: rgba(239, 68, 68, 0.1);
 }
+
+/* Header Avatar */
+.header-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent, #7c3aed);
+  border: none;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-avatar:hover {
+  opacity: 0.85;
+}
