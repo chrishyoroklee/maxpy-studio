@@ -6,6 +6,16 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == userId;
       allow delete: if false;
 
+      match /plugins/{pluginId} {
+        allow read, create, update: if request.auth != null && request.auth.uid == userId;
+        allow delete: if request.auth != null && request.auth.uid == userId;
+
+        match /messages/{messageId} {
+          allow read, create: if request.auth != null && request.auth.uid == userId;
+          allow update, delete: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+
       match /prompts/{promptId} {
         allow read, create: if request.auth != null && request.auth.uid == userId;
         allow update, delete: if request.auth != null && request.auth.uid == userId;

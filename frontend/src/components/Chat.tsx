@@ -23,6 +23,7 @@ interface Props {
     stderr: string;
     amxdBytes: Uint8Array | null;
   }>;
+  pluginId?: string | null;
 }
 
 const SUGGESTIONS = [

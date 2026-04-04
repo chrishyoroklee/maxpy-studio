@@ -1,9 +1,16 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { streamLLM, RateLimitError } from "../api/client";
 import { extractCode, ExtractionError } from "../lib/extractor";
 import { rewriteSavePaths } from "../lib/pathRewriter";
 import { fetchTemplateCode } from "../lib/templates";
-import { savePrompt, saveGeneration, updateGenerationStoragePath } from "../lib/firestore";
+import {
+  savePrompt,
+  saveGeneration,
+  updateGenerationStoragePath,
+  saveMessage,
+  loadMessages,
+  updatePlugin,
+} from "../lib/firestore";
 import { uploadAmxd } from "../lib/storage";
 import { auth } from "../lib/firebase";
 import { extractMaxpat } from "../lib/maxpatExtractor";
@@ -34,11 +41,37 @@ type RunCodeFn = (code: string) => Promise<{
   amxdBytes: Uint8Array | null;
 }>;
 
-export function useChat(runCode: RunCodeFn) {
+export function useChat(runCode: RunCodeFn, pluginId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
+
+  // Load existing messages when pluginId changes
+  useEffect(() => {
+    if (!pluginId) {
+      setMessages([]);
+      setHistoryLoaded(false);
+      return;
+    }
+
+    setHistoryLoaded(false);
+    loadMessages(pluginId)
+      .then((docs) => {
+        const loaded: ChatMessage[] = docs.map((d) => ({
+          id: d.id,
+          role: d.role,
+          content: d.content,
+          code: d.code,
+          error: d.error,
+          warnings: d.warnings as ValidationIssue[] | undefined,
+        }));
+        setMessages(loaded);
+      })
+      .catch(() => {})
+      .finally(() => setHistoryLoaded(true));
+  }, [pluginId]);
 
   const sendMessage = useCallback(
     async (prompt: string, model: string, template?: string) => {
@@ -52,13 +85,17 @@ export function useChat(runCode: RunCodeFn) {
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsLoading(true);
 
-      // Log prompt to Firestore (fire and forget)
-      const promptId = await savePrompt({ prompt, model, templateUsed: template }).catch(() => "");
+      // Save user message to Firestore
+      if (pluginId) {
+        saveMessage(pluginId, { role: "user", content: prompt }).catch(() => {});
+      }
+
+      // Log prompt (fire and forget)
+      const promptId = await savePrompt({ prompt, model, templateUsed: template, pluginId: pluginId || undefined }).catch(() => "");
 
       const assistantId = assistantMsg.id;
 
       try {
-        // If template, fetch its code for the LLM context
         let templateCode: string | undefined;
         if (template) {
           templateCode = await fetchTemplateCode(template);
@@ -97,6 +134,10 @@ export function useChat(runCode: RunCodeFn) {
               m.id === assistantId ? { ...m, error: msg } : m
             )
           );
+          // Save error message
+          if (pluginId) {
+            saveMessage(pluginId, { role: "assistant", content: fullResponse, error: msg }).catch(() => {});
+          }
           return;
         }
 
@@ -120,7 +161,7 @@ export function useChat(runCode: RunCodeFn) {
             warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
             patchData = parsePatchGraph(maxpat);
           } catch {
-            // Patch viz is non-critical — proceed without it
+            // Patch viz is non-critical
           }
 
           setMessages((prev) =>
@@ -128,43 +169,67 @@ export function useChat(runCode: RunCodeFn) {
               m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes!, patchData, warnings } : m
             )
           );
+
           const generationId = await saveGeneration({
             promptId,
+            pluginId: pluginId || undefined,
             llmResponse: fullResponse,
             extractedCode: rewritten,
             status: "success",
             validationIssues: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
           }).catch(() => "");
 
-          // Upload .amxd to Firebase Storage (fire and forget)
+          // Upload .amxd to Firebase Storage
           if (generationId && auth.currentUser) {
-            const uid = auth.currentUser.uid;
-            uploadAmxd(uid, generationId, result.amxdBytes)
-              .then((storagePath) => updateGenerationStoragePath(uid, generationId, storagePath))
-              .catch((err) => console.warn("Failed to upload .amxd to storage:", err));
+            const userId = auth.currentUser.uid;
+            uploadAmxd(userId, generationId, result.amxdBytes)
+              .then((storagePath) => {
+                updateGenerationStoragePath(userId, generationId, storagePath);
+                // Update plugin with latest .amxd path and status
+                if (pluginId) {
+                  updatePlugin(pluginId, { status: "ready", amxdStoragePath: storagePath });
+                }
+              })
+              .catch((err) => console.warn("Failed to upload .amxd:", err));
+          }
+
+          // Save assistant message
+          if (pluginId) {
+            saveMessage(pluginId, {
+              role: "assistant",
+              content: fullResponse,
+              code: rewritten,
+              warnings: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
+            }).catch(() => {});
           }
         } else {
+          const errorMsg = `Execution failed:\n${result.stderr}`;
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, error: `Execution failed:\n${result.stderr}` }
-                : m
+              m.id === assistantId ? { ...m, error: errorMsg } : m
             )
           );
           saveGeneration({
             promptId,
+            pluginId: pluginId || undefined,
             llmResponse: fullResponse,
             extractedCode: rewritten,
             status: "error",
             errorMessage: result.stderr,
           }).catch(() => {});
+
+          // Save error message
+          if (pluginId) {
+            saveMessage(pluginId, { role: "assistant", content: fullResponse, code: rewritten, error: errorMsg }).catch(() => {});
+          }
         }
       } catch (err) {
         const isRateLimited = err instanceof RateLimitError;
+        const errorMsg = err instanceof Error ? err.message : "Unknown error";
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, error: err instanceof Error ? err.message : "Unknown error", isRateLimited }
+              ? { ...m, error: errorMsg, isRateLimited }
               : m
           )
         );
@@ -172,10 +237,10 @@ export function useChat(runCode: RunCodeFn) {
         setIsLoading(false);
       }
     },
-    [runCode]
+    [runCode, pluginId]
   );
 
   const clearMessages = useCallback(() => setMessages([]), []);
 
-  return { messages, isLoading, sendMessage, clearMessages };
+  return { messages, isLoading, sendMessage, clearMessages, historyLoaded };
 }
