@@ -1,5 +1,3 @@
-import { unzipSync } from "fflate";
-
 // ---------------------------------------------------------------------------
 // TypeScript types for the .maxpat JSON structure
 // ---------------------------------------------------------------------------
@@ -58,65 +56,76 @@ export class MaxpatExtractionError extends Error {
 // ---------------------------------------------------------------------------
 
 /**
- * Extract the .maxpat JSON from a .amxd Uint8Array.
+ * Extract the patcher JSON from .amxd bytes.
  *
- * An .amxd file is a zip archive containing (at least) one `.maxpat` file.
- * This function unzips the archive, locates the first `.maxpat` entry,
- * parses it as JSON, and returns the typed result.
+ * The .amxd format is a binary wrapper with three chunks:
+ *   ampf (device type) | meta (empty) | ptch (patcher JSON + null byte)
+ *
+ * Each chunk: [4-byte tag][4-byte uint32 LE size][size bytes data]
  */
 export function extractMaxpat(amxdBytes: Uint8Array): MaxPatJson {
   if (!amxdBytes || amxdBytes.length === 0) {
     throw new MaxpatExtractionError("Empty or missing .amxd bytes.");
   }
 
-  let entries: Record<string, Uint8Array>;
-  try {
-    entries = unzipSync(amxdBytes);
-  } catch (err) {
-    throw new MaxpatExtractionError(
-      `Failed to unzip .amxd file: ${err instanceof Error ? err.message : String(err)}`
-    );
+  const view = new DataView(amxdBytes.buffer, amxdBytes.byteOffset, amxdBytes.byteLength);
+  const decoder = new TextDecoder("utf-8");
+  let offset = 0;
+
+  while (offset + 8 <= amxdBytes.length) {
+    // Read 4-byte chunk tag
+    const tag = decoder.decode(amxdBytes.slice(offset, offset + 4));
+    // Read 4-byte uint32 LE size
+    const size = view.getUint32(offset + 4, true);
+    offset += 8;
+
+    if (tag === "ptch") {
+      if (offset + size > amxdBytes.length) {
+        throw new MaxpatExtractionError(
+          `ptch chunk size (${size}) exceeds file bounds.`
+        );
+      }
+
+      // ptch data is null-terminated JSON
+      let jsonBytes = amxdBytes.slice(offset, offset + size);
+      // Strip trailing null bytes
+      while (jsonBytes.length > 0 && jsonBytes[jsonBytes.length - 1] === 0) {
+        jsonBytes = jsonBytes.slice(0, -1);
+      }
+
+      let jsonString: string;
+      try {
+        jsonString = decoder.decode(jsonBytes);
+      } catch (err) {
+        throw new MaxpatExtractionError(
+          `Failed to decode ptch chunk as UTF-8: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(jsonString);
+      } catch (err) {
+        throw new MaxpatExtractionError(
+          `Failed to parse patcher JSON: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        !("patcher" in parsed)
+      ) {
+        throw new MaxpatExtractionError(
+          "Invalid .maxpat structure: missing top-level 'patcher' key."
+        );
+      }
+
+      return parsed as MaxPatJson;
+    }
+
+    offset += size;
   }
 
-  const maxpatPath = Object.keys(entries).find((name) =>
-    name.endsWith(".maxpat")
-  );
-
-  if (!maxpatPath) {
-    const fileList = Object.keys(entries).join(", ");
-    throw new MaxpatExtractionError(
-      `No .maxpat file found inside .amxd archive. Files found: ${fileList || "(none)"}`
-    );
-  }
-
-  const maxpatBytes = entries[maxpatPath];
-  let jsonString: string;
-  try {
-    jsonString = new TextDecoder("utf-8").decode(maxpatBytes);
-  } catch (err) {
-    throw new MaxpatExtractionError(
-      `Failed to decode .maxpat file as UTF-8: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonString);
-  } catch (err) {
-    throw new MaxpatExtractionError(
-      `Failed to parse .maxpat JSON: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
-
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    !("patcher" in parsed)
-  ) {
-    throw new MaxpatExtractionError(
-      "Invalid .maxpat structure: missing top-level 'patcher' key."
-    );
-  }
-
-  return parsed as MaxPatJson;
+  throw new MaxpatExtractionError("No ptch chunk found in .amxd file.");
 }
