@@ -68,7 +68,7 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
     <div className="auth-screen">
       <form className="auth-card" onSubmit={handleSubmit}>
         <img src="/logo.webp" alt="" className="auth-logo" />
-        <h1 className="auth-title">MaxPyLang Studio</h1>
+        <h1 className="auth-title">MaxPy Studio</h1>
         <p className="auth-subtitle">
           {mode === "reset"
             ? "Enter your email to reset your password"

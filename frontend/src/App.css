@@ -689,19 +689,23 @@ body {
 }
 
 .template-back {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
   font-family: var(--font-body);
   cursor: pointer;
-  padding: 0;
+  padding: 10px 20px;
+  border-radius: 8px;
   align-self: flex-start;
-  transition: color 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .template-back:hover {
-  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ==================== Embedded Mode (M4L jweb) ==================== */
@@ -1357,6 +1361,49 @@ body {
 
 .header-avatar:hover {
   opacity: 0.85;
+}
+
+.header-avatar-wrapper {
+  position: relative;
+}
+
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 140px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.header-dropdown button {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.header-dropdown button:hover {
+  background: var(--bg-surface);
+}
+
+.header-dropdown button:last-child {
+  color: #ef4444;
+}
+
+.header-dropdown button:last-child:hover {
+  background: rgba(239, 68, 68, 0.1);
 }
 
 /* ==================== Rate Limit Warning ==================== */

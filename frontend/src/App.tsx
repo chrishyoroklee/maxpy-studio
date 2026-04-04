@@ -5,7 +5,7 @@ import { useAuth } from "./hooks/useAuth";
 import { useChat } from "./hooks/useChat";
 import { useEmbedded } from "./hooks/useEmbedded";
 import { usePyodide } from "./hooks/usePyodide";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
 function App() {
@@ -18,6 +18,19 @@ function App() {
   const [model, setModel] = useState(
     () => sessionStorage.getItem("maxpy-model") ?? "claude-sonnet-4-20250514"
   );
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showMenu]);
 
   const handleModelChange = (m: string) => {
     setModel(m);
@@ -75,7 +88,7 @@ function App() {
         <header className="header">
           <div className="header-left">
             <img src="/logo.webp" alt="" className="header-logo" />
-            <h1>MaxPyLang Studio</h1>
+            <h1>MaxPy Studio</h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <select
@@ -87,13 +100,24 @@ function App() {
               <option value="claude-opus-4-20250514">Opus 4</option>
             </select>
             {user && (
-              <button
-                className="header-avatar"
-                onClick={() => setView("dashboard")}
-                title="Dashboard"
-              >
-                {initial}
-              </button>
+              <div className="header-avatar-wrapper" ref={menuRef}>
+                <button
+                  className="header-avatar"
+                  onClick={() => setShowMenu(!showMenu)}
+                >
+                  {initial}
+                </button>
+                {showMenu && (
+                  <div className="header-dropdown">
+                    <button onClick={() => { setView("dashboard"); setShowMenu(false); }}>
+                      Dashboard
+                    </button>
+                    <button onClick={() => { logout(); setShowMenu(false); }}>
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </header>

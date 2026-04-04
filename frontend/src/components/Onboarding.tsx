@@ -7,7 +7,7 @@ export function Onboarding({ onComplete }: Props) {
     <div className="onboarding">
       <div className="onboarding-card">
         <img src="/logo.webp" alt="" className="onboarding-logo" />
-        <h1 className="onboarding-title">MaxPyLang Studio</h1>
+        <h1 className="onboarding-title">MaxPy Studio</h1>
         <p className="onboarding-subtitle">
           Generate Max for Live plugins from text descriptions.
           Powered by AI — runs entirely in your browser.

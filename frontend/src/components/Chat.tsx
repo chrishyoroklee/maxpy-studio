@@ -6,6 +6,7 @@ import { rewriteSavePaths } from "../lib/pathRewriter";
 import { CodePatchTabs } from "./CodePatchTabs";
 import { extractMaxpat } from "../lib/maxpatExtractor";
 import { parsePatchGraph, type PatchGraph } from "../lib/patchGraphParser";
+import { logEvent } from "../lib/firestore";
 
 interface Props {
   messages: ChatMessage[];
@@ -58,6 +59,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleTemplateBuild = async (templateName: string) => {
+    logEvent("template_click", { template: templateName });
     setTemplateBuild({ status: "building", templateName });
     try {
       const code = await fetchTemplateCode(templateName);
@@ -112,7 +114,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
       <div className="messages">
         {messages.length === 0 && !templateBuild && (
           <div className="welcome">
-            <h2>MaxPyLang Studio</h2>
+            <h2>MaxPy Studio</h2>
             <p>Describe a plugin. Get an .amxd for Ableton.</p>
             <div className="suggestions">
               {SUGGESTIONS.map((s) => (
@@ -146,7 +148,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                   <span className="template-result-label">Base template ready</span>
                   <button
                     className="download-button"
-                    onClick={() => downloadBlob(templateBuild.amxdBytes!, "device.amxd")}
+                    onClick={() => { logEvent("download", { source: "template", template: templateBuild.templateName }); downloadBlob(templateBuild.amxdBytes!, "device.amxd"); }}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -223,7 +225,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                   <span className="embedded-status-success">Created!</span>
                   <button
                     className="download-button"
-                    onClick={() => downloadBlob(lastAssistant.amxdBytes!, "device.amxd")}
+                    onClick={() => { logEvent("download", { source: "embedded" }); downloadBlob(lastAssistant.amxdBytes!, "device.amxd"); }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -257,7 +259,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                   {msg.amxdBytes && (
                     <button
                       className="download-button"
-                      onClick={() => downloadBlob(msg.amxdBytes!, "device.amxd")}
+                      onClick={() => { logEvent("download", { source: "chat" }); downloadBlob(msg.amxdBytes!, "device.amxd"); }}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />

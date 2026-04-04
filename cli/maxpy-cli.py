@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MaxPyLang Studio CLI — generate Max for Live plugins from the command line.
+MaxPy Studio CLI — generate Max for Live plugins from the command line.
 
 Usage:
     python maxpy-cli.py "Make a chorus effect with rate and depth"
