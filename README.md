@@ -1,4 +1,4 @@
-# MaxPyLang Studio
+# MaxPy Studio
 
 Generate Max for Live audio plugins from natural language prompts.
 

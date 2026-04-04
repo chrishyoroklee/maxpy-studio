@@ -159,7 +159,7 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
       <header className="header">
         <div className="header-left">
           <img src="/logo.webp" alt="" className="header-logo" />
-          <h1>MaxPyLang Studio</h1>
+          <h1>MaxPy Studio</h1>
         </div>
         <button className="dashboard-back" onClick={onBack}>
           &#8592; Back to Studio

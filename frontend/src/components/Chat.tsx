@@ -112,7 +112,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
       <div className="messages">
         {messages.length === 0 && !templateBuild && (
           <div className="welcome">
-            <h2>MaxPyLang Studio</h2>
+            <h2>MaxPy Studio</h2>
             <p>Describe a plugin. Get an .amxd for Ableton.</p>
             <div className="suggestions">
               {SUGGESTIONS.map((s) => (

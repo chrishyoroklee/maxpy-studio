@@ -75,7 +75,7 @@ function App() {
         <header className="header">
           <div className="header-left">
             <img src="/logo.webp" alt="" className="header-logo" />
-            <h1>MaxPyLang Studio</h1>
+            <h1>MaxPy Studio</h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <select
