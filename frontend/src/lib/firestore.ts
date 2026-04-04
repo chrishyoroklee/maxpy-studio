@@ -4,11 +4,17 @@ import {
   doc,
   setDoc,
   updateDoc,
+  deleteDoc,
+  getDocs,
+  query,
+  orderBy,
   increment,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { auth } from "./firebase";
+
+// ---- Helpers ----
 
 function getSessionId(): string {
   let id = sessionStorage.getItem("maxpy-session-id");
@@ -19,11 +25,12 @@ function getSessionId(): string {
   return id;
 }
 
-/**
- * Create or update the user profile document.
- * Uses merge so existing fields (like counters) aren't overwritten.
- * Exported so it can be called on auth state change.
- */
+function uid(): string | null {
+  return auth.currentUser?.uid ?? null;
+}
+
+// ---- User doc ----
+
 export async function ensureUserDoc(): Promise<void> {
   const user = auth.currentUser;
   if (!user) return;
@@ -40,17 +47,140 @@ export async function ensureUserDoc(): Promise<void> {
   );
 }
 
+// ---- Plugins ----
+
+export interface PluginDoc {
+  id: string;
+  name: string;
+  deviceType: string | null;
+  templateUsed: string | null;
+  status: "draft" | "ready";
+  amxdStoragePath: string | null;
+  model: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export async function createPlugin(name: string, model: string, templateUsed?: string): Promise<string> {
+  const u = uid();
+  if (!u) return "";
+
+  const docRef = await addDoc(collection(db, "users", u, "plugins"), {
+    name,
+    deviceType: null,
+    templateUsed: templateUsed || null,
+    status: "draft",
+    amxdStoragePath: null,
+    model,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  // Increment plugin counter
+  await updateDoc(doc(db, "users", u), {
+    totalPlugins: increment(1),
+  }).catch(() => {});
+
+  return docRef.id;
+}
+
+export async function loadPlugins(): Promise<PluginDoc[]> {
+  const u = uid();
+  if (!u) return [];
+
+  const q = query(
+    collection(db, "users", u, "plugins"),
+    orderBy("updatedAt", "desc")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PluginDoc));
+}
+
+export async function updatePlugin(
+  pluginId: string,
+  data: Partial<Pick<PluginDoc, "name" | "deviceType" | "status" | "amxdStoragePath" | "model">>,
+): Promise<void> {
+  const u = uid();
+  if (!u) return;
+
+  await updateDoc(doc(db, "users", u, "plugins", pluginId), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deletePlugin(pluginId: string): Promise<void> {
+  const u = uid();
+  if (!u) return;
+
+  // Delete messages subcollection first
+  const messagesSnap = await getDocs(
+    collection(db, "users", u, "plugins", pluginId, "messages")
+  );
+  for (const msgDoc of messagesSnap.docs) {
+    await deleteDoc(msgDoc.ref);
+  }
+
+  await deleteDoc(doc(db, "users", u, "plugins", pluginId));
+}
+
+// ---- Plugin Messages ----
+
+export interface MessageDoc {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  code?: string;
+  error?: string;
+  warnings?: Array<{ severity: string; code: string; message: string }>;
+  amxdStoragePath?: string;
+  createdAt: any;
+}
+
+export async function saveMessage(
+  pluginId: string,
+  data: Omit<MessageDoc, "id" | "createdAt">,
+): Promise<string> {
+  const u = uid();
+  if (!u) return "";
+
+  const docRef = await addDoc(
+    collection(db, "users", u, "plugins", pluginId, "messages"),
+    { ...data, createdAt: serverTimestamp() }
+  );
+
+  // Touch plugin updatedAt
+  await updateDoc(doc(db, "users", u, "plugins", pluginId), {
+    updatedAt: serverTimestamp(),
+  }).catch(() => {});
+
+  return docRef.id;
+}
+
+export async function loadMessages(pluginId: string): Promise<MessageDoc[]> {
+  const u = uid();
+  if (!u) return [];
+
+  const q = query(
+    collection(db, "users", u, "plugins", pluginId, "messages"),
+    orderBy("createdAt", "asc")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as MessageDoc));
+}
+
+// ---- Legacy: Prompts & Generations (kept for backward compat) ----
+
 export async function savePrompt(data: {
   prompt: string;
   model: string;
   templateUsed?: string;
+  pluginId?: string;
 }): Promise<string> {
-  const user = auth.currentUser;
-  if (!user) return "";
+  const u = uid();
+  if (!u) return "";
 
-  await ensureUserDoc();
-
-  const docRef = await addDoc(collection(db, "users", user.uid, "prompts"), {
+  const docRef = await addDoc(collection(db, "users", u, "prompts"), {
     ...data,
     sessionId: getSessionId(),
     createdAt: serverTimestamp(),
@@ -60,23 +190,23 @@ export async function savePrompt(data: {
 
 export async function saveGeneration(data: {
   promptId: string;
+  pluginId?: string;
   llmResponse: string;
   extractedCode: string;
   status: "success" | "error";
   errorMessage?: string;
   validationIssues?: Array<{ severity: string; code: string; message: string }>;
 }): Promise<string> {
-  const user = auth.currentUser;
-  if (!user) return "";
+  const u = uid();
+  if (!u) return "";
 
-  const docRef = await addDoc(collection(db, "users", user.uid, "generations"), {
+  const docRef = await addDoc(collection(db, "users", u, "generations"), {
     ...data,
     amxdStoragePath: null,
     createdAt: serverTimestamp(),
   });
 
-  // Increment counters on user doc
-  const userRef = doc(db, "users", user.uid);
+  const userRef = doc(db, "users", u);
   await updateDoc(userRef, {
     totalGenerations: increment(1),
     ...(data.status === "success" ? { successfulGenerations: increment(1) } : {}),
@@ -85,17 +215,14 @@ export async function saveGeneration(data: {
   return docRef.id;
 }
 
-/**
- * Log a user event (template click, download, etc.) to users/{uid}/events.
- */
 export async function logEvent(
   event: string,
   metadata?: Record<string, unknown>,
 ): Promise<void> {
-  const user = auth.currentUser;
-  if (!user) return;
+  const u = uid();
+  if (!u) return;
 
-  await addDoc(collection(db, "users", user.uid, "events"), {
+  await addDoc(collection(db, "users", u, "events"), {
     event,
     ...metadata,
     sessionId: getSessionId(),
@@ -104,10 +231,10 @@ export async function logEvent(
 }
 
 export async function updateGenerationStoragePath(
-  uid: string,
+  userId: string,
   generationId: string,
   storagePath: string,
 ): Promise<void> {
-  const docRef = doc(db, "users", uid, "generations", generationId);
+  const docRef = doc(db, "users", userId, "generations", generationId);
   await updateDoc(docRef, { amxdStoragePath: storagePath });
 }
