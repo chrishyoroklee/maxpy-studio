@@ -235,32 +235,170 @@ There is NO `disconnect()`, `remove()`, `detach()`, `add()`, or `create()` metho
 12. If maxpylang doesn't recognize an object name, it creates it with **0 inlets and 0 outlets**. Any `.ins[0]` or `.outs[0]` access will crash with IndexError. Stick to objects listed in the reference tables above.
 13. For EQ implementations: use cascaded `lores~` filters with frequency crossover (subtract low from input to get high). Do NOT invent filter coefficient objects.
 
-## Extended Object Reference
+## Complete Object Reference (from maxpylang database)
 
-### Additional Common Objects
+ONLY use objects from this list. If an object is not listed here, it probably doesn't exist and maxpylang will create it with 0 inlets/outlets, causing IndexError.
 
+### Oscillators & Sources
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| cycle~ | 2 | 1 | signal |
+| saw~ | 2 | 1 | signal |
+| rect~ | 3 | 1 | signal |
+| tri~ | 3 | 1 | signal |
+| phasor~ | 2 | 1 | signal |
+| noise~ | 1 | 1 | signal |
+| pink~ | 1 | 1 | signal |
+
+### Audio I/O (M4L)
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| plugin~ | 2 | 2 | signal, signal |
+| plugout~ | 2 | 2 | signal, signal |
+| adc~ | 1 | 2 | signal, signal |
+| dac~ | 2 | 0 | — |
+| ezdac~ | 2 | 0 | — |
+| ezadc~ | 1 | 2 | signal, signal |
+
+### Filters (use these instead of inventing filter objects)
 | Object | Inlets | Outlets | Outlet Types | Notes |
 |--------|--------|---------|--------------|-------|
-| saw~ | 1 | 1 | signal | Band-limited sawtooth |
-| rect~ | 2 | 1 | signal | Band-limited rectangle |
-| tri~ | 2 | 1 | signal | Band-limited triangle |
-| phasor~ | 2 | 1 | signal | Ramp oscillator 0-1 |
-| sig~ | 1 | 1 | signal | Float to signal conversion |
-| snapshot~ | 1 | 1 | float | Signal to float (needs @active 1) |
-| line~ | 1 | 1 | signal | Signal ramp generator |
-| slide~ | 3 | 1 | signal | Slew limiter (attack, release) |
-| abs~ | 1 | 1 | signal | Absolute value |
-| overdrive~ | 2 | 1 | signal | Soft clipper / saturation |
-| degrade~ | 3 | 1 | signal | Bit/sample rate reduction |
-| svf~ | 3 | 4 | signal x4 | State variable filter (lp,hp,bp,notch) |
-| mtof | 1 | 1 | float | MIDI note to frequency |
-| ftom | 1 | 1 | float | Frequency to MIDI note |
-| scale | 6 | 1 | float | Map range |
-| scale~ | 6 | 1 | signal | Map range (signal) |
-| number | 1 | 2 | int, bang | Number box |
-| toggle | 1 | 1 | int | On/off toggle |
-| button | 1 | 1 | bang | Bang button |
-| counter | 3 | 4 | int, int, int, bang | Count with bounds |
-| sel | varies | varies | bang(s), anything | Route by value |
-| loadbang | 0 | 1 | bang | Bang on patch load |
-| message | 1 | 1 | varies | Message box (set text with edit()) |
+| lores~ | 3 | 1 | signal | Lowpass (freq, resonance) |
+| reson~ | 4 | 1 | signal | Bandpass resonant |
+| biquad~ | 6 | 1 | signal | General biquad (5 coefficients) |
+| svf~ | 3 | 4 | signal x4 | State variable: lp, hp, bp, notch |
+| allpass~ | 3 | 1 | signal | Allpass filter |
+| onepole~ | 2 | 1 | signal | Simple one-pole lowpass |
+| cascade~ | 2 | 1 | signal | Cascaded biquad |
+| comb~ | 5 | 1 | signal | Comb filter |
+| cross~ | 2 | 2 | signal, signal | Crossover filter |
+
+### Delay
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| tapin~ | 1 | 1 | tapconnect |
+| tapout~ | 1 | 1 | signal |
+| delay~ | 2 | 1 | signal |
+
+### Signal Math (all: 2 inlets, 1 outlet, signal)
+`+~`, `*~`, `-~`, `/~` — all have 2 inlets and 1 outlet (signal).
+
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| clip~ | 3 | 1 | signal |
+| abs~ | 1 | 1 | signal |
+| scale~ | 6 | 1 | signal |
+| pow~ | 2 | 1 | signal |
+| sqrt~ | 1 | 1 | signal |
+| log~ | 2 | 1 | signal |
+| round~ | 2 | 1 | signal |
+| atodb~ | 1 | 1 | signal |
+| dbtoa~ | 1 | 1 | signal |
+
+### Signal Control & Conversion
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| sig~ | 1 | 1 | signal |
+| snapshot~ | 2 | 1 | float |
+| line~ | 2 | 2 | signal, bang |
+| curve~ | 3 | 2 | signal, bang |
+| slide~ | 3 | 1 | signal |
+| rampsmooth~ | 3 | 1 | signal |
+| change~ | 1 | 1 | signal |
+| adsr~ | 5 | 4 | signal, signal, -, - |
+
+### Effects & Dynamics
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| overdrive~ | 2 | 1 | signal |
+| degrade~ | 3 | 1 | signal |
+| normalize~ | 2 | 1 | signal |
+
+### Analysis & Metering
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| peakamp~ | 2 | 1 | float |
+| meter~ | 1 | 1 | float |
+| average~ | 1 | 1 | signal |
+| spectroscope~ | 2 | 1 | — |
+| scope~ | 2 | 0 | — |
+
+### Buffer & Sampling
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| buffer~ | 1 | 2 | float, bang |
+| groove~ | 3 | 2 | signal, signal |
+| play~ | 1 | 2 | signal, bang |
+| record~ | 3 | 1 | signal |
+| wave~ | 3 | 1 | signal |
+
+### Control Objects (Max)
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| metro | 2 | 1 | bang |
+| counter | 5 | 4 | int, -, -, int |
+| toggle | 1 | 1 | int |
+| button | 1 | 1 | bang |
+| number | 1 | 2 | -, bang |
+| flonum | 1 | 2 | -, bang |
+| loadbang | 1 | 1 | bang |
+| message | 2 | 1 | — |
+| print | 1 | 0 | — |
+| random | 2 | 1 | int |
+| drunk | 3 | 1 | int |
+| delay | 2 | 1 | bang |
+| pipe | 2 | 1 | — |
+| timer | 2 | 2 | float, - |
+| speedlim | 2 | 1 | — |
+| scale | 6 | 1 | — |
+| split | 3 | 2 | int, int |
+
+### Control Math (all: 2 inlets, 1 outlet)
+`+`, `*`, `-`, `/`, `%`, `>`, `<`, `==`, `!=`, `>=`, `<=` — all have 2 inlets and 1 outlet.
+
+### Routing
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| route | 2 | 2 | -, - |
+| gate | 2 | 1 | — |
+| switch | 3 | 1 | — |
+| trigger | 1 | 2 | -, - |
+| pack | 2 | 1 | — |
+| unpack | 1 | 2 | int, int |
+| prepend | 1 | 1 | — |
+| append | 1 | 1 | — |
+
+### MIDI
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| notein | 1 | 3 | int, int, int |
+| noteout | 3 | 0 | — |
+| ctlin | 1 | 3 | int, int, int |
+| ctlout | 3 | 0 | — |
+| midiin | 1 | 1 | int |
+| midiout | 1 | 0 | — |
+| midiparse | 1 | 8 | varies |
+| midiformat | 7 | 2 | int, - |
+| mtof | 1 | 1 | — |
+| ftom | 1 | 1 | — |
+
+### Data
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| coll | 1 | 4 | -, -, -, - |
+| dict | 2 | 4 | dictionary, -, -, - |
+| table | 2 | 2 | int, bang |
+
+### UI (use place_raw for these)
+| Object | Inlets | Outlets | Outlet Types |
+|--------|--------|---------|--------------|
+| live.dial | 1 | 2 | -, float |
+| live.slider | 1 | 2 | -, float |
+| live.toggle | 1 | 2 | -, float |
+| live.numbox | 1 | 2 | -, float |
+| live.menu | 1 | 2 | -, float |
+| comment | 1 | 0 | — |
+| panel | 1 | 0 | — |
+| multislider | 1 | 2 | -, - |
+| slider | 1 | 1 | — |
+| dial | 1 | 1 | float |
