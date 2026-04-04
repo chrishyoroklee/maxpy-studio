@@ -1545,6 +1545,79 @@ body {
   color: var(--text-primary);
 }
 
+/* ==================== Validation Panel ==================== */
+
+.validation-panel {
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-base);
+  font-size: 13px;
+}
+
+.validation-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.validation-summary:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.validation-summary-icon {
+  font-size: 12px;
+}
+
+.validation-chevron {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.validation-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.validation-issue {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 4px 0;
+}
+
+.validation-issue-icon {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.validation-issue--error {
+  color: #ef4444;
+}
+
+.validation-issue--warning {
+  color: #f59e0b;
+}
+
+.validation-issue--info {
+  color: var(--text-secondary);
+}
+
 /* ==================== Dashboard Download Error ==================== */
 
 .dashboard-error-banner {

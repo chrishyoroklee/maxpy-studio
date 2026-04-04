@@ -2,17 +2,20 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { PatchGraph } from "./PatchGraph";
 import type { PatchGraph as PatchGraphData } from "../lib/patchGraphParser";
+import type { ValidationIssue } from "../lib/patchValidator";
 
 interface Props {
   code: string;
   patchData?: PatchGraphData;
+  warnings?: ValidationIssue[];
 }
 
 type Tab = "patch" | "code";
 
-export function CodePatchTabs({ code, patchData }: Props) {
+export function CodePatchTabs({ code, patchData, warnings }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("patch");
   const [fullscreen, setFullscreen] = useState(false);
+  const [validationOpen, setValidationOpen] = useState(false);
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -20,7 +23,6 @@ export function CodePatchTabs({ code, patchData }: Props) {
       if (e.key === "Escape") setFullscreen(false);
     };
     document.addEventListener("keydown", handleKey);
-    // Prevent body scroll when fullscreen
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", handleKey);
@@ -29,6 +31,24 @@ export function CodePatchTabs({ code, patchData }: Props) {
   }, [fullscreen]);
 
   const hasPatch = patchData && patchData.nodes.length > 0;
+
+  const errorCount = warnings?.filter((w) => w.severity === "error").length ?? 0;
+  const warningCount = warnings?.filter((w) => w.severity === "warning").length ?? 0;
+  const infoCount = warnings?.filter((w) => w.severity === "info").length ?? 0;
+
+  const summaryParts: string[] = [];
+  if (errorCount > 0) summaryParts.push(`${errorCount} error${errorCount > 1 ? "s" : ""}`);
+  if (warningCount > 0) summaryParts.push(`${warningCount} warning${warningCount > 1 ? "s" : ""}`);
+  if (infoCount > 0) summaryParts.push(`${infoCount} info`);
+  const summaryText = summaryParts.join(", ");
+
+  const severityIcon = (severity: string) => {
+    switch (severity) {
+      case "error": return "\u2716";
+      case "warning": return "\u26A0";
+      default: return "\u2139";
+    }
+  };
 
   return (
     <>
@@ -72,6 +92,30 @@ export function CodePatchTabs({ code, patchData }: Props) {
           )}
         </div>
         <div className="tab-content">
+          {activeTab === "patch" && warnings && warnings.length > 0 && (
+            <div className="validation-panel">
+              <button
+                className="validation-summary"
+                onClick={() => setValidationOpen((o) => !o)}
+              >
+                <span className={`validation-summary-icon${errorCount > 0 ? " validation-issue--error" : " validation-issue--warning"}`}>
+                  {errorCount > 0 ? "\u2716" : "\u26A0"}
+                </span>
+                <span>{summaryText}</span>
+                <span className="validation-chevron">{validationOpen ? "\u25B2" : "\u25BC"}</span>
+              </button>
+              {validationOpen && (
+                <ul className="validation-list">
+                  {warnings.map((issue, i) => (
+                    <li key={i} className={`validation-issue validation-issue--${issue.severity}`}>
+                      <span className="validation-issue-icon">{severityIcon(issue.severity)}</span>
+                      <span>{issue.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           {activeTab === "patch" && (
             hasPatch ? (
               <div className="patch-graph-container" onClick={() => setFullscreen(true)} style={{ cursor: "pointer" }}>
