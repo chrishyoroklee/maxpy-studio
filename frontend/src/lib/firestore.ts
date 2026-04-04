@@ -144,9 +144,15 @@ export async function saveMessage(
   const u = uid();
   if (!u) return "";
 
+  // Strip undefined values — Firestore rejects them
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (v !== undefined) clean[k] = v;
+  }
+
   const docRef = await addDoc(
     collection(db, "users", u, "plugins", pluginId, "messages"),
-    { ...data, createdAt: serverTimestamp() }
+    { ...clean, createdAt: serverTimestamp() }
   );
 
   // Touch plugin updatedAt

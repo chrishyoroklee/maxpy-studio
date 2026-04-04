@@ -113,7 +113,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
 
       // Save user message to Firestore
       if (pluginId) {
-        saveMessage(pluginId, { role: "user", content: prompt }).catch(() => {});
+        saveMessage(pluginId, { role: "user", content: prompt }).catch((e) => console.warn("Failed to save user message:", e));
       }
 
       // Log prompt (fire and forget)
@@ -162,7 +162,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           );
           // Save error message
           if (pluginId) {
-            saveMessage(pluginId, { role: "assistant", content: fullResponse, error: msg }).catch(() => {});
+            saveMessage(pluginId, { role: "assistant", content: fullResponse, error: msg }).catch((e) => console.warn("Failed to save assistant error:", e));
           }
           return;
         }
@@ -228,7 +228,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
               code: rewritten,
               warnings: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
               amxdStoragePath,
-            }).catch(() => {});
+            }).catch((e) => console.warn("Failed to save assistant message:", e));
           }
         } else {
           const errorMsg = `Execution failed:\n${result.stderr}`;
@@ -248,7 +248,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
 
           // Save error message
           if (pluginId) {
-            saveMessage(pluginId, { role: "assistant", content: fullResponse, code: rewritten, error: errorMsg }).catch(() => {});
+            saveMessage(pluginId, { role: "assistant", content: fullResponse, code: rewritten, error: errorMsg }).catch((e) => console.warn("Failed to save assistant error:", e));
           }
         }
       } catch (err) {
