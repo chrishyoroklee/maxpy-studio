@@ -1466,9 +1466,14 @@ body {
 
 .patch-fullscreen-content {
   position: relative;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   background: var(--bg-base);
+}
+
+.patch-fullscreen-content .patch-graph {
+  width: 100vw;
+  height: 100vh;
 }
 
 .patch-fullscreen-close {

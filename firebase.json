@@ -18,11 +18,17 @@
     "rules": "storage.rules"
   },
   "emulators": {
+    "auth": {
+      "port": 9099
+    },
     "functions": {
       "port": 5055
     },
     "firestore": {
       "port": 8181
+    },
+    "storage": {
+      "port": 9199
     },
     "ui": {
       "port": 4002
