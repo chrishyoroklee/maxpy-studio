@@ -22,8 +22,9 @@ function getSessionId(): string {
 /**
  * Create or update the user profile document.
  * Uses merge so existing fields (like counters) aren't overwritten.
+ * Exported so it can be called on auth state change.
  */
-async function ensureUserDoc(): Promise<void> {
+export async function ensureUserDoc(): Promise<void> {
   const user = auth.currentUser;
   if (!user) return;
 

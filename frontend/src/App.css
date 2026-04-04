@@ -1455,17 +1455,15 @@ body {
 /* Fullscreen overlay — portaled to document.body */
 .patch-fullscreen-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   z-index: 9999;
   background: var(--bg-base);
+  overflow: hidden;
 }
 
-.patch-fullscreen-overlay .patch-graph {
-  width: 100vw;
-  height: 100vh;
+.patch-fullscreen-overlay > .patch-graph {
+  position: absolute;
+  inset: 0;
 }
 
 .patch-fullscreen-close {

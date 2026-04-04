@@ -12,6 +12,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import { ensureUserDoc } from "../lib/firestore";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -20,9 +21,11 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       setLoading(false);
+      // Create/update user doc in Firestore on login
+      if (u) ensureUserDoc().catch(() => {});
     });
     return unsubscribe;
   }, []);

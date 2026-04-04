@@ -111,7 +111,7 @@ export function CodePatchTabs({ code, patchData }: Props) {
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-          <PatchGraph nodes={patchData.nodes} edges={patchData.edges} />
+          <PatchGraph key="fullscreen" nodes={patchData.nodes} edges={patchData.edges} />
         </div>,
         document.body
       )}
