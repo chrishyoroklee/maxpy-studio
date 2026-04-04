@@ -64,6 +64,7 @@ export async function saveGeneration(data: {
   extractedCode: string;
   status: "success" | "error";
   errorMessage?: string;
+  validationIssues?: Array<{ severity: string; code: string; message: string }>;
 }): Promise<string> {
   const user = auth.currentUser;
   if (!user) return "";

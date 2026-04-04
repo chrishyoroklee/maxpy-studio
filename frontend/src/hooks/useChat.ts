@@ -8,6 +8,7 @@ import { uploadAmxd } from "../lib/storage";
 import { auth } from "../lib/firebase";
 import { extractMaxpat } from "../lib/maxpatExtractor";
 import { parsePatchGraph, type PatchGraph } from "../lib/patchGraphParser";
+import { validatePatch, type ValidationIssue } from "../lib/patchValidator";
 
 export interface ChatMessage {
   id: string;
@@ -16,6 +17,7 @@ export interface ChatMessage {
   code?: string;
   amxdBytes?: Uint8Array;
   patchData?: PatchGraph;
+  warnings?: ValidationIssue[];
   error?: string;
   isRateLimited?: boolean;
 }
@@ -109,10 +111,13 @@ export function useChat(runCode: RunCodeFn) {
         const result = await runCode(rewritten);
 
         if (result.success && result.amxdBytes) {
-          // Extract patch data for visualization
+          // Extract patch data for visualization and validate
           let patchData: PatchGraph | undefined;
+          let warnings: ValidationIssue[] | undefined;
           try {
             const maxpat = extractMaxpat(result.amxdBytes);
+            const validationResult = validatePatch(maxpat);
+            warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
             patchData = parsePatchGraph(maxpat);
           } catch {
             // Patch viz is non-critical — proceed without it
@@ -120,7 +125,7 @@ export function useChat(runCode: RunCodeFn) {
 
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes!, patchData } : m
+              m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes!, patchData, warnings } : m
             )
           );
           const generationId = await saveGeneration({
@@ -128,6 +133,7 @@ export function useChat(runCode: RunCodeFn) {
             llmResponse: fullResponse,
             extractedCode: rewritten,
             status: "success",
+            validationIssues: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
           }).catch(() => "");
 
           // Upload .amxd to Firebase Storage (fire and forget)

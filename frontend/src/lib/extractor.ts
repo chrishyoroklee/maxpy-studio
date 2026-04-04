@@ -74,4 +74,20 @@ function validate(code: string): void {
   if (!code.includes(".save(") && !code.includes("save_amxd")) {
     throw new ExtractionError("Generated code does not save the patch.");
   }
+
+  // Validate patch method calls — catch hallucinated methods like patch.disconnect()
+  const VALID_PATCH_METHODS = new Set([
+    'set_position', 'place', 'place_obj', 'connect', 'save',
+    'get_json', 'replace', 'delete', 'check', 'reorder', 'inspect',
+  ]);
+
+  const methodCalls = [...code.matchAll(/\bpatch\.(\w+)\s*\(/g)];
+  for (const match of methodCalls) {
+    if (!VALID_PATCH_METHODS.has(match[1])) {
+      throw new ExtractionError(
+        `Generated code calls patch.${match[1]}() which does not exist on MaxPatch. ` +
+        `Valid methods: ${[...VALID_PATCH_METHODS].join(', ')}`
+      );
+    }
+  }
 }

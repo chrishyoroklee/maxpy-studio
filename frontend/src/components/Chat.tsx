@@ -7,6 +7,7 @@ import { CodePatchTabs } from "./CodePatchTabs";
 import { extractMaxpat } from "../lib/maxpatExtractor";
 import { parsePatchGraph, type PatchGraph } from "../lib/patchGraphParser";
 import { logEvent } from "../lib/firestore";
+import { validatePatch, type ValidationIssue } from "../lib/patchValidator";
 
 interface Props {
   messages: ChatMessage[];
@@ -47,6 +48,7 @@ interface TemplateBuild {
   templateName: string;
   amxdBytes?: Uint8Array;
   patchData?: PatchGraph;
+  warnings?: ValidationIssue[];
   code?: string;
   error?: string;
 }
@@ -67,13 +69,16 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
       const result = await runCode(rewritten);
       if (result.success && result.amxdBytes) {
         let patchData: PatchGraph | undefined;
+        let warnings: ValidationIssue[] | undefined;
         try {
           const maxpat = extractMaxpat(result.amxdBytes);
+          const validationResult = validatePatch(maxpat);
+          warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
           patchData = parsePatchGraph(maxpat);
         } catch {
           // Patch viz is non-critical
         }
-        setTemplateBuild({ status: "done", templateName, amxdBytes: result.amxdBytes, patchData, code: rewritten });
+        setTemplateBuild({ status: "done", templateName, amxdBytes: result.amxdBytes, patchData, warnings, code: rewritten });
       } else {
         setTemplateBuild({ status: "error", templateName, error: result.stderr || "Build failed" });
       }
@@ -159,7 +164,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                   </button>
                 </div>
                 {templateBuild.code && (
-                  <CodePatchTabs code={templateBuild.code} patchData={templateBuild.patchData} />
+                  <CodePatchTabs code={templateBuild.code} patchData={templateBuild.patchData} warnings={templateBuild.warnings} />
                 )}
                 {!embedded && (
                   <form className="template-customize" onSubmit={handleCustomize}>
@@ -249,7 +254,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                 <div className="message-content">
                   {msg.content}
                   {msg.code && (
-                    <CodePatchTabs code={msg.code} patchData={msg.patchData} />
+                    <CodePatchTabs code={msg.code} patchData={msg.patchData} warnings={msg.warnings} />
                   )}
                   {msg.error && (
                     <div className={`message-error${msg.isRateLimited ? " message-rate-limited" : ""}`}>

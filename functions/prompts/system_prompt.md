@@ -197,3 +197,67 @@ For `place_raw()` objects, the inlet/outlet count is set by the dict:
 | Control | `metro`, `counter`, `toggle`, `button`, `number`, `select`, `snapshot~` |
 | Envelope | `line~`, `adsr~` |
 | MIDI | `notein`, `mtof` |
+
+## Available Methods — Complete Reference
+
+### MaxPatch methods (ONLY these exist)
+- `set_position(x, y)` — set cursor before place()
+- `place(*objs, num_objs=1, spacing_type="grid", spacing=[80,80], starting_pos=None)` — returns list
+- `connect(*connections)` — each connection is [outlet, inlet]
+- `save(filename)` — save .maxpat
+- `get_json()` — get patcher dict
+- `delete(objs=[], cords=[])` — remove objects/cords
+- `check()` — check for unknown objects
+- `reorder()` — renumber object IDs
+
+### MaxObject properties and methods
+- `.ins` — list of Inlets (0-indexed)
+- `.outs` — list of Outlets (0-indexed)
+- `.name` — object class name
+- `.move(x, y)` — reposition
+- `.edit(text_add=None, text=None, **extra_attribs)` — modify
+
+There is NO `disconnect()`, `remove()`, `detach()`, `add()`, or `create()` method on MaxPatch.
+
+## Common Mistakes to Avoid
+
+1. `patch.disconnect()` — does NOT exist. Use `patch.delete(cords=[(outlet, inlet)])` if needed
+2. `place()` always returns a **list** — always index with `[0]` for single objects
+3. Don't connect signal (~) outlet to control-only object directly — use `snapshot~ 20 @active 1` to convert
+4. Don't connect control float to signal inlet — use `sig~` to convert
+5. `clip~ -1. 1.` is MANDATORY before `plugout~` — speaker safety, never skip
+6. Feedback loops MUST use `*~ amount` where amount < 1.0 to prevent runaway
+7. Always check inlet/outlet count before connecting — connecting to `.ins[2]` on a 2-inlet object causes IndexError
+8. `sig~` converts float messages to signal rate — required for dial→signal connections
+9. `snapshot~ 20 @active 1` converts signal to float — required for signal→message connections
+10. Don't use `patch.save("file.amxd", device_type=...)` — device_type is NOT a parameter of save(). Use `save_amxd()` from the `amxd` module instead
+
+## Extended Object Reference
+
+### Additional Common Objects
+
+| Object | Inlets | Outlets | Outlet Types | Notes |
+|--------|--------|---------|--------------|-------|
+| saw~ | 1 | 1 | signal | Band-limited sawtooth |
+| rect~ | 2 | 1 | signal | Band-limited rectangle |
+| tri~ | 2 | 1 | signal | Band-limited triangle |
+| phasor~ | 2 | 1 | signal | Ramp oscillator 0-1 |
+| sig~ | 1 | 1 | signal | Float to signal conversion |
+| snapshot~ | 1 | 1 | float | Signal to float (needs @active 1) |
+| line~ | 1 | 1 | signal | Signal ramp generator |
+| slide~ | 3 | 1 | signal | Slew limiter (attack, release) |
+| abs~ | 1 | 1 | signal | Absolute value |
+| overdrive~ | 2 | 1 | signal | Soft clipper / saturation |
+| degrade~ | 3 | 1 | signal | Bit/sample rate reduction |
+| svf~ | 3 | 4 | signal x4 | State variable filter (lp,hp,bp,notch) |
+| mtof | 1 | 1 | float | MIDI note to frequency |
+| ftom | 1 | 1 | float | Frequency to MIDI note |
+| scale | 6 | 1 | float | Map range |
+| scale~ | 6 | 1 | signal | Map range (signal) |
+| number | 1 | 2 | int, bang | Number box |
+| toggle | 1 | 1 | int | On/off toggle |
+| button | 1 | 1 | bang | Bang button |
+| counter | 3 | 4 | int, int, int, bang | Count with bounds |
+| sel | varies | varies | bang(s), anything | Route by value |
+| loadbang | 0 | 1 | bang | Bang on patch load |
+| message | 1 | 1 | varies | Message box (set text with edit()) |
