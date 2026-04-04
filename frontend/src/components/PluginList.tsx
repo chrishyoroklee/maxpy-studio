@@ -47,7 +47,7 @@ export function PluginList({ onOpen, defaultModel }: Props) {
       <div className="plugin-list-header">
         <div>
           <h2 className="plugin-list-title">Your Plugins</h2>
-          <p className="plugin-list-subtitle">Create and manage Max for Live devices</p>
+          <p className="plugin-list-subtitle">Create and manage audio plugins</p>
         </div>
         <button className="plugin-create-btn" onClick={() => setShowCreateModal(true)}>
           + New Plugin
@@ -118,7 +118,7 @@ export function PluginList({ onOpen, defaultModel }: Props) {
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="modal-title">New Plugin</h3>
-            <p className="modal-subtitle">Give your Max for Live device a name</p>
+            <p className="modal-subtitle">Give your audio plugin a name</p>
             <input
               type="text"
               className="modal-input"
