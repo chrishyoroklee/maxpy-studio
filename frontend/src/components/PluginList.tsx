@@ -9,6 +9,8 @@ interface Props {
 export function PluginList({ onOpen, defaultModel }: Props) {
   const [plugins, setPlugins] = useState<PluginDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -20,10 +22,15 @@ export function PluginList({ onOpen, defaultModel }: Props) {
   }, []);
 
   const handleCreate = async () => {
+    const name = newName.trim() || "Untitled Plugin";
     setCreating(true);
     try {
-      const id = await createPlugin("Untitled Plugin", defaultModel);
-      if (id) onOpen(id);
+      const id = await createPlugin(name, defaultModel);
+      if (id) {
+        setShowCreateModal(false);
+        setNewName("");
+        onOpen(id);
+      }
     } finally {
       setCreating(false);
     }
@@ -42,8 +49,8 @@ export function PluginList({ onOpen, defaultModel }: Props) {
           <h2 className="plugin-list-title">Your Plugins</h2>
           <p className="plugin-list-subtitle">Create and manage Max for Live devices</p>
         </div>
-        <button className="plugin-create-btn" onClick={handleCreate} disabled={creating}>
-          {creating ? "Creating..." : "+ New Plugin"}
+        <button className="plugin-create-btn" onClick={() => setShowCreateModal(true)}>
+          + New Plugin
         </button>
       </div>
 
@@ -61,7 +68,7 @@ export function PluginList({ onOpen, defaultModel }: Props) {
             </svg>
           </div>
           <p>No plugins yet. Create your first one!</p>
-          <button className="plugin-create-btn" onClick={handleCreate} disabled={creating}>
+          <button className="plugin-create-btn" onClick={() => setShowCreateModal(true)}>
             + New Plugin
           </button>
         </div>
@@ -103,6 +110,33 @@ export function PluginList({ onOpen, defaultModel }: Props) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Create Plugin Modal */}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">New Plugin</h3>
+            <p className="modal-subtitle">Give your Max for Live device a name</p>
+            <input
+              type="text"
+              className="modal-input"
+              placeholder="e.g. Fat Bass Synth, Dreamy Reverb..."
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !creating) handleCreate(); }}
+              autoFocus
+            />
+            <div className="modal-actions">
+              <button className="modal-cancel" onClick={() => { setShowCreateModal(false); setNewName(""); }}>
+                Cancel
+              </button>
+              <button className="modal-confirm" onClick={handleCreate} disabled={creating}>
+                {creating ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
