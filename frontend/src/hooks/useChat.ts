@@ -11,7 +11,7 @@ import {
   loadMessages,
   updatePlugin,
 } from "../lib/firestore";
-import { uploadAmxd } from "../lib/storage";
+import { uploadAmxd, downloadAmxd } from "../lib/storage";
 import { auth } from "../lib/firebase";
 import { extractMaxpat } from "../lib/maxpatExtractor";
 import { parsePatchGraph, type PatchGraph } from "../lib/patchGraphParser";
@@ -58,7 +58,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
 
     setHistoryLoaded(false);
     loadMessages(pluginId)
-      .then((docs) => {
+      .then(async (docs) => {
         const loaded: ChatMessage[] = docs.map((d) => ({
           id: d.id,
           role: d.role,
@@ -68,6 +68,32 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           warnings: d.warnings as ValidationIssue[] | undefined,
         }));
         setMessages(loaded);
+
+        // Restore .amxd bytes + patch data for messages that have a storage path
+        await Promise.all(
+          docs.map(async (d, i) => {
+            if (!d.amxdStoragePath) return;
+            try {
+              const bytes = await downloadAmxd(d.amxdStoragePath);
+              let patchData: PatchGraph | undefined;
+              try {
+                const maxpat = extractMaxpat(bytes);
+                patchData = parsePatchGraph(maxpat);
+              } catch {
+                // non-critical
+              }
+              setMessages((prev) => {
+                const next = [...prev];
+                if (next[i]) {
+                  next[i] = { ...next[i], amxdBytes: bytes, patchData };
+                }
+                return next;
+              });
+            } catch {
+              // skip failed downloads
+            }
+          })
+        );
       })
       .catch(() => {})
       .finally(() => setHistoryLoaded(true));
@@ -179,27 +205,29 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             validationIssues: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
           }).catch(() => "");
 
-          // Upload .amxd to Firebase Storage
+          // Upload .amxd to Firebase Storage, then save message with storage path
+          let amxdStoragePath: string | undefined;
           if (generationId && auth.currentUser) {
             const userId = auth.currentUser.uid;
-            uploadAmxd(userId, generationId, result.amxdBytes)
-              .then((storagePath) => {
-                updateGenerationStoragePath(userId, generationId, storagePath);
-                // Update plugin with latest .amxd path and status
-                if (pluginId) {
-                  updatePlugin(pluginId, { status: "ready", amxdStoragePath: storagePath });
-                }
-              })
-              .catch((err) => console.warn("Failed to upload .amxd:", err));
+            try {
+              amxdStoragePath = await uploadAmxd(userId, generationId, result.amxdBytes);
+              updateGenerationStoragePath(userId, generationId, amxdStoragePath).catch(() => {});
+              if (pluginId) {
+                updatePlugin(pluginId, { status: "ready", amxdStoragePath }).catch(() => {});
+              }
+            } catch (err) {
+              console.warn("Failed to upload .amxd:", err);
+            }
           }
 
-          // Save assistant message
+          // Save assistant message with storage path reference
           if (pluginId) {
             saveMessage(pluginId, {
               role: "assistant",
               content: fullResponse,
               code: rewritten,
               warnings: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
+              amxdStoragePath,
             }).catch(() => {});
           }
         } else {

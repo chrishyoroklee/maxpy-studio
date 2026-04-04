@@ -152,6 +152,20 @@ textarea:focus-visible {
   opacity: 0.8;
 }
 
+.header-separator {
+  color: var(--text-muted);
+  font-size: var(--text-lg);
+  font-weight: 300;
+  user-select: none;
+}
+
+.header-plugin-name {
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
 .header-logo {
   width: 28px;
   height: 28px;
