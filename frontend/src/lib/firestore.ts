@@ -1,4 +1,12 @@
-import { collection, addDoc, doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  doc,
+  setDoc,
+  updateDoc,
+  increment,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "./firebase";
 import { auth } from "./firebase";
 
@@ -11,16 +19,38 @@ function getSessionId(): string {
   return id;
 }
 
+/**
+ * Create or update the user profile document.
+ * Uses merge so existing fields (like counters) aren't overwritten.
+ */
+async function ensureUserDoc(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const userRef = doc(db, "users", user.uid);
+  await setDoc(
+    userRef,
+    {
+      displayName: user.displayName || null,
+      email: user.email || null,
+      lastActiveAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
 export async function savePrompt(data: {
   prompt: string;
   model: string;
   templateUsed?: string;
 }): Promise<string> {
-  if (!auth.currentUser) return "";
+  const user = auth.currentUser;
+  if (!user) return "";
 
-  const docRef = await addDoc(collection(db, "prompts"), {
+  await ensureUserDoc();
+
+  const docRef = await addDoc(collection(db, "users", user.uid, "prompts"), {
     ...data,
-    uid: auth.currentUser.uid,
     sessionId: getSessionId(),
     createdAt: serverTimestamp(),
   });
@@ -34,21 +64,30 @@ export async function saveGeneration(data: {
   status: "success" | "error";
   errorMessage?: string;
 }): Promise<string> {
-  if (!auth.currentUser) return "";
+  const user = auth.currentUser;
+  if (!user) return "";
 
-  const docRef = await addDoc(collection(db, "generations"), {
+  const docRef = await addDoc(collection(db, "users", user.uid, "generations"), {
     ...data,
-    uid: auth.currentUser.uid,
     amxdStoragePath: null,
     createdAt: serverTimestamp(),
   });
+
+  // Increment counters on user doc
+  const userRef = doc(db, "users", user.uid);
+  await updateDoc(userRef, {
+    totalGenerations: increment(1),
+    ...(data.status === "success" ? { successfulGenerations: increment(1) } : {}),
+  }).catch(() => {});
+
   return docRef.id;
 }
 
 export async function updateGenerationStoragePath(
+  uid: string,
   generationId: string,
   storagePath: string,
 ): Promise<void> {
-  const docRef = doc(db, "generations", generationId);
+  const docRef = doc(db, "users", uid, "generations", generationId);
   await updateDoc(docRef, { amxdStoragePath: storagePath });
 }

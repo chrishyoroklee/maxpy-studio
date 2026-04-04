@@ -1,13 +1,10 @@
 import { useState } from "react";
-
-interface PatchData {
-  nodes: any[];
-  edges: any[];
-}
+import { PatchGraph } from "./PatchGraph";
+import type { PatchGraph as PatchGraphData } from "../lib/patchGraphParser";
 
 interface Props {
   code: string;
-  patchData?: PatchData;
+  patchData?: PatchGraphData;
 }
 
 type Tab = "patch" | "code";
@@ -61,33 +58,37 @@ export function CodePatchTabs({ code, patchData }: Props) {
       </div>
       <div className="tab-content">
         {activeTab === "patch" && (
-          <div className="patch-placeholder">
-            <svg
-              className="patch-placeholder-icon"
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="6" cy="6" r="2" />
-              <circle cx="18" cy="6" r="2" />
-              <circle cx="6" cy="18" r="2" />
-              <circle cx="18" cy="18" r="2" />
-              <path d="M8 6h8" />
-              <path d="M6 8v8" />
-              <path d="M18 8v8" />
-              <path d="M8 18h8" />
-            </svg>
-            <span className="patch-placeholder-text">
-              {patchData
-                ? "Patch visualization loading..."
-                : "Patch visualization will appear here"}
-            </span>
-          </div>
+          patchData && patchData.nodes.length > 0 ? (
+            <div className="patch-graph-container">
+              <PatchGraph nodes={patchData.nodes} edges={patchData.edges} />
+            </div>
+          ) : (
+            <div className="patch-placeholder">
+              <svg
+                className="patch-placeholder-icon"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="6" cy="6" r="2" />
+                <circle cx="18" cy="6" r="2" />
+                <circle cx="6" cy="18" r="2" />
+                <circle cx="18" cy="18" r="2" />
+                <path d="M8 6h8" />
+                <path d="M6 8v8" />
+                <path d="M18 8v8" />
+                <path d="M8 18h8" />
+              </svg>
+              <span className="patch-placeholder-text">
+                Patch visualization will appear here
+              </span>
+            </div>
+          )
         )}
         {activeTab === "code" && (
           <pre className="code-block">

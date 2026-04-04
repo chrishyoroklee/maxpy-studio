@@ -1,3 +1,5 @@
+import { auth } from "../lib/firebase";
+
 const FUNCTIONS_BASE = import.meta.env.VITE_FUNCTIONS_BASE ?? "http://127.0.0.1:5001/maxpylang-studio/us-central1";
 
 export interface GenerateEvent {
@@ -30,9 +32,14 @@ export async function* streamLLM(
   if (template) body.template = template;
   if (templateCode) body.templateCode = templateCode;
 
+  // Send auth token for server-side uid verification + rate limiting
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const idToken = await auth.currentUser?.getIdToken().catch(() => null);
+  if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
+
   const response = await fetch(`${FUNCTIONS_BASE}/generateCode`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
 

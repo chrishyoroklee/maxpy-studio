@@ -10,7 +10,7 @@ const firestore = admin.firestore();
 
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const rateLimitPerHour = defineInt("RATE_LIMIT_PER_HOUR", { default: 20 });
-const rateLimitUnauthPerHour = defineInt("RATE_LIMIT_UNAUTH_PER_HOUR", { default: 5 });
+
 
 // Load system prompt + examples at cold start
 function buildSystemPrompt(): string {
@@ -36,23 +36,34 @@ interface GenerateRequestBody {
   messages?: { role: string; content: string }[];
   template?: string;
   templateCode?: string;
-  uid?: string;
 }
 
 /**
- * Check rate limit for a user (by uid) or anonymous requester (by IP).
- * Returns { allowed: true } or { allowed: false, retryAfter: seconds }.
+ * Verify Firebase Auth ID token from Authorization header.
+ * Returns the uid if valid, null otherwise.
  */
-async function checkRateLimit(
-  identifier: string,
-  identifierField: "uid" | "ip",
+async function verifyAuthToken(authHeader: string | undefined): Promise<string | null> {
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  try {
+    const token = authHeader.slice(7);
+    const decoded = await admin.auth().verifyIdToken(token);
+    return decoded.uid;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check rate limit for an authenticated user by querying their prompts subcollection.
+ */
+async function checkUserRateLimit(
+  uid: string,
   limit: number,
 ): Promise<{ allowed: true } | { allowed: false; retryAfter: number }> {
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
   const snapshot = await firestore
-    .collection("prompts")
-    .where(identifierField, "==", identifier)
+    .collection("users").doc(uid).collection("prompts")
     .where("createdAt", ">", admin.firestore.Timestamp.fromDate(oneHourAgo))
     .orderBy("createdAt", "asc")
     .get();
@@ -90,28 +101,23 @@ export const generateCode = onRequest(
       return;
     }
 
-    // --- Rate limiting ---
-    const uid = body.uid || null;
-    const ip = req.ip || req.headers["x-forwarded-for"]?.toString() || "unknown";
+    // --- Auth + Rate limiting ---
+    const uid = await verifyAuthToken(req.headers.authorization);
 
-    try {
-      let rateLimitResult;
-      if (uid) {
-        rateLimitResult = await checkRateLimit(uid, "uid", rateLimitPerHour.value());
-      } else {
-        rateLimitResult = await checkRateLimit(ip, "ip", rateLimitUnauthPerHour.value());
+    if (uid) {
+      try {
+        const rateLimitResult = await checkUserRateLimit(uid, rateLimitPerHour.value());
+        if (!rateLimitResult.allowed) {
+          res.status(429).json({
+            error: "Rate limit exceeded",
+            retryAfter: rateLimitResult.retryAfter,
+          });
+          return;
+        }
+      } catch (rateLimitErr) {
+        // If rate limit check fails, log and proceed (fail-open)
+        console.warn("Rate limit check failed, proceeding:", rateLimitErr);
       }
-
-      if (!rateLimitResult.allowed) {
-        res.status(429).json({
-          error: "Rate limit exceeded",
-          retryAfter: rateLimitResult.retryAfter,
-        });
-        return;
-      }
-    } catch (rateLimitErr) {
-      // If rate limit check fails, log and proceed (fail-open)
-      console.warn("Rate limit check failed, proceeding:", rateLimitErr);
     }
 
     // Set SSE headers

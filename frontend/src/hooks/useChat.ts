@@ -6,6 +6,8 @@ import { fetchTemplateCode } from "../lib/templates";
 import { savePrompt, saveGeneration, updateGenerationStoragePath } from "../lib/firestore";
 import { uploadAmxd } from "../lib/storage";
 import { auth } from "../lib/firebase";
+import { extractMaxpat } from "../lib/maxpatExtractor";
+import { parsePatchGraph, type PatchGraph } from "../lib/patchGraphParser";
 
 export interface ChatMessage {
   id: string;
@@ -13,6 +15,7 @@ export interface ChatMessage {
   content: string;
   code?: string;
   amxdBytes?: Uint8Array;
+  patchData?: PatchGraph;
   error?: string;
   isRateLimited?: boolean;
 }
@@ -106,9 +109,18 @@ export function useChat(runCode: RunCodeFn) {
         const result = await runCode(rewritten);
 
         if (result.success && result.amxdBytes) {
+          // Extract patch data for visualization
+          let patchData: PatchGraph | undefined;
+          try {
+            const maxpat = extractMaxpat(result.amxdBytes);
+            patchData = parsePatchGraph(maxpat);
+          } catch {
+            // Patch viz is non-critical — proceed without it
+          }
+
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes! } : m
+              m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes!, patchData } : m
             )
           );
           const generationId = await saveGeneration({
@@ -120,8 +132,9 @@ export function useChat(runCode: RunCodeFn) {
 
           // Upload .amxd to Firebase Storage (fire and forget)
           if (generationId && auth.currentUser) {
-            uploadAmxd(auth.currentUser.uid, generationId, result.amxdBytes)
-              .then((storagePath) => updateGenerationStoragePath(generationId, storagePath))
+            const uid = auth.currentUser.uid;
+            uploadAmxd(uid, generationId, result.amxdBytes)
+              .then((storagePath) => updateGenerationStoragePath(uid, generationId, storagePath))
               .catch((err) => console.warn("Failed to upload .amxd to storage:", err));
           }
         } else {

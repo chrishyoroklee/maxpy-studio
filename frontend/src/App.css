@@ -1435,6 +1435,11 @@ body {
   font-size: 13px;
 }
 
+.patch-graph-container {
+  height: 400px;
+  min-height: 300px;
+}
+
 .code-patch-tabs .code-block {
   margin: 0;
   padding: 16px;

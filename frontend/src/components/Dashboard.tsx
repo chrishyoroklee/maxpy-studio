@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { downloadAmxd } from "../lib/storage";
 import { downloadBlob } from "../lib/download";
@@ -41,6 +41,7 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [userStats, setUserStats] = useState<{ total: number; successful: number } | null>(null);
 
   useEffect(() => {
     loadHistory();
@@ -49,17 +50,26 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
   async function loadHistory() {
     setLoading(true);
     try {
-      // Load generations for this user
+      // Read user doc for stats
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setUserStats({
+          total: data.totalGenerations || 0,
+          successful: data.successfulGenerations || 0,
+        });
+      }
+
+      // Load generations from user subcollection
       const genQuery = query(
-        collection(db, "generations"),
-        where("uid", "==", user.uid),
+        collection(db, "users", user.uid, "generations"),
         orderBy("createdAt", "desc"),
         limit(50)
       );
       const genSnapshot = await getDocs(genQuery);
-      const gens = genSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Generation));
+      const gens = genSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Generation));
 
-      // Load associated prompts
+      // Load associated prompts from user subcollection
       const promptIds = [...new Set(gens.map(g => g.promptId).filter(Boolean))];
       const promptMap = new Map<string, Prompt>();
 
@@ -68,13 +78,12 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
         const batch = promptIds.slice(i, i + 10);
         if (batch.length === 0) continue;
         const promptQuery = query(
-          collection(db, "prompts"),
-          where("__name__", "in", batch),
-          where("uid", "==", user.uid)
+          collection(db, "users", user.uid, "prompts"),
+          where("__name__", "in", batch)
         );
         const promptSnapshot = await getDocs(promptQuery);
-        promptSnapshot.docs.forEach(doc => {
-          promptMap.set(doc.id, { id: doc.id, ...doc.data() } as Prompt);
+        promptSnapshot.docs.forEach(d => {
+          promptMap.set(d.id, { id: d.id, ...d.data() } as Prompt);
         });
       }
 
@@ -101,8 +110,8 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
     return g.status === filter;
   });
 
-  const totalGenerations = generations.length;
-  const successCount = generations.filter(g => g.status === "success").length;
+  const totalGenerations = userStats?.total ?? generations.length;
+  const successCount = userStats?.successful ?? generations.filter(g => g.status === "success").length;
   const successRate = totalGenerations > 0 ? Math.round((successCount / totalGenerations) * 100) : 0;
 
   const handleNameSave = async () => {
