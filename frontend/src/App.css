@@ -1435,10 +1435,61 @@ body {
   font-size: 13px;
 }
 
+.code-patch-tabs {
+  margin-left: -24px;
+  margin-right: -24px;
+  width: calc(100% + 48px);
+}
+
 .patch-graph-container {
-  height: 70vh;
-  min-height: 500px;
-  max-height: 800px;
+  height: 60vh;
+  min-height: 400px;
+}
+
+.tab-expand {
+  flex: 0 !important;
+  padding: 8px 12px !important;
+  margin-left: auto;
+}
+
+/* Fullscreen overlay */
+.patch-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.patch-fullscreen-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-base);
+}
+
+.patch-fullscreen-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1001;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.patch-fullscreen-close:hover {
+  background: var(--bg-surface);
 }
 
 .code-patch-tabs .code-block {
