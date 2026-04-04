@@ -102,7 +102,7 @@
 
 /* -- signal objects (~): subtle tint ------------------------ */
 .max-object-node__body--signal {
-  border-color: #c8a83e;
+  border-color: var(--signal, #c8a83e);
   background: rgba(200, 168, 62, 0.06);
 }
 
@@ -130,7 +130,7 @@
 
 /* Signal handle (~) */
 .max-object-node .react-flow__handle--signal {
-  background: #c8a83e;
+  background: var(--signal, #c8a83e);
 }
 
 /* Top handles (inlets) */
@@ -147,7 +147,7 @@
 
 /* Signal edge: thick yellow */
 .react-flow__edge.signal-edge .react-flow__edge-path {
-  stroke: #c8a83e;
+  stroke: var(--signal, #c8a83e);
   stroke-width: 2.5;
 }
 

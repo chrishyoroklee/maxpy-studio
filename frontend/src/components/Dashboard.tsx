@@ -90,7 +90,7 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
             </div>
             <div className="dashboard-setting dashboard-setting-danger">
               <div>
-                <div className="dashboard-setting-label" style={{ color: "#ef4444" }}>Delete Account</div>
+                <div className="dashboard-setting-label" style={{ color: "var(--error)" }}>Delete Account</div>
                 <div className="dashboard-setting-value">Permanently delete your account and all data</div>
               </div>
               <button
