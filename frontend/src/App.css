@@ -1436,8 +1436,9 @@ body {
 }
 
 .patch-graph-container {
-  height: 400px;
-  min-height: 300px;
+  height: 70vh;
+  min-height: 500px;
+  max-height: 800px;
 }
 
 .code-patch-tabs .code-block {
