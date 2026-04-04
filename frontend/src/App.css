@@ -734,7 +734,7 @@ textarea:focus-visible {
 }
 
 .template-result-label {
-  color: #4ade80;
+  color: var(--success);
   font-size: 14px;
   font-weight: 600;
 }
@@ -906,7 +906,7 @@ textarea:focus-visible {
 }
 
 .embedded-status-success {
-  color: #4ade80;
+  color: var(--success);
 }
 
 .embedded-status .download-button {
@@ -1059,7 +1059,7 @@ textarea:focus-visible {
 }
 
 .auth-success {
-  color: #4ade80;
+  color: var(--success);
   font-size: 13px;
   margin-bottom: 12px;
   padding: 8px 12px;
@@ -1301,7 +1301,7 @@ textarea:focus-visible {
 }
 
 .dashboard-status-dot.success {
-  background: #22c55e;
+  background: var(--success);
 }
 
 .dashboard-status-dot.error {

@@ -221,7 +221,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
               );
               if (lastAssistant?.error) return (
                 <div className={`embedded-status${lastAssistant.isRateLimited ? " message-rate-limited" : ""}`}>
-                  <span style={{ color: lastAssistant.isRateLimited ? "#d97706" : "var(--error)" }}>
+                  <span style={{ color: lastAssistant.isRateLimited ? "var(--warning)" : "var(--error)" }}>
                     {lastAssistant.isRateLimited ? "Slow down \u2014 " : "Error: "}{lastAssistant.error}
                   </span>
                 </div>

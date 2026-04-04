@@ -176,7 +176,7 @@ export function PatchGraph({ nodes, edges }: PatchGraphProps) {
         <MiniMap
           nodeColor={(node) => {
             const d = node.data as unknown as PatchNodeData;
-            if (d.isSignal) return "#c8a83e";
+            if (d.isSignal) return "var(--signal, #c8a83e)";
             if (d.maxclass === "comment") return "rgba(255,255,255,0.15)";
             return "var(--text-secondary)";
           }}
