@@ -30,6 +30,15 @@ function uid(): string | null {
   return auth.currentUser?.uid ?? null;
 }
 
+/** Strip undefined values — Firestore rejects them. */
+function stripUndefined<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) clean[k] = v;
+  }
+  return clean;
+}
+
 // ---- User doc ----
 
 export async function ensureUserDoc(): Promise<void> {
@@ -153,15 +162,9 @@ export async function saveMessage(
   const u = uid();
   if (!u) return "";
 
-  // Strip undefined values — Firestore rejects them
-  const clean: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(data)) {
-    if (v !== undefined) clean[k] = v;
-  }
-
   const docRef = await addDoc(
     collection(db, "users", u, "plugins", pluginId, "messages"),
-    { ...clean, createdAt: serverTimestamp() }
+    { ...stripUndefined(data as Record<string, unknown>), createdAt: serverTimestamp() }
   );
 
   // Touch plugin updatedAt
@@ -196,7 +199,7 @@ export async function savePrompt(data: {
   if (!u) return "";
 
   const docRef = await addDoc(collection(db, "users", u, "prompts"), {
-    ...data,
+    ...stripUndefined(data as Record<string, unknown>),
     sessionId: getSessionId(),
     createdAt: serverTimestamp(),
   });
@@ -216,7 +219,7 @@ export async function saveGeneration(data: {
   if (!u) return "";
 
   const docRef = await addDoc(collection(db, "users", u, "generations"), {
-    ...data,
+    ...stripUndefined(data as Record<string, unknown>),
     amxdStoragePath: null,
     createdAt: serverTimestamp(),
   });

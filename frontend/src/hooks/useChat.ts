@@ -226,7 +226,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             extractedCode: rewritten,
             status: "success",
             validationIssues: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
-          }).catch(() => "");
+          }).catch((e) => { console.warn("saveGeneration failed:", e); return ""; });
 
           // Upload .amxd to Firebase Storage, then save message with storage path
           let amxdStoragePath: string | undefined;
