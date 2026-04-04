@@ -231,6 +231,9 @@ There is NO `disconnect()`, `remove()`, `detach()`, `add()`, or `create()` metho
 8. `sig~` converts float messages to signal rate — required for dial→signal connections
 9. `snapshot~ 20 @active 1` converts signal to float — required for signal→message connections
 10. Don't use `patch.save("file.amxd", device_type=...)` — device_type is NOT a parameter of save(). Use `save_amxd()` from the `amxd` module instead
+11. These objects DO NOT EXIST: `lowshelf~`, `highshelf~`, `peaking~`, `parametric~`, `eq~`, `bandpass~`, `notch~`. For EQ/filters, use `lores~` (lowpass), `reson~` (bandpass), `biquad~` (general), or `svf~` (state variable with lp/hp/bp/notch outputs). For crossover EQ, chain `lores~` filters with subtraction as shown in the 3-Band EQ template.
+12. If maxpylang doesn't recognize an object name, it creates it with **0 inlets and 0 outlets**. Any `.ins[0]` or `.outs[0]` access will crash with IndexError. Stick to objects listed in the reference tables above.
+13. For EQ implementations: use cascaded `lores~` filters with frequency crossover (subtract low from input to get high). Do NOT invent filter coefficient objects.
 
 ## Extended Object Reference
 
