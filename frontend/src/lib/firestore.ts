@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
 import { auth } from "./firebase";
 
@@ -16,9 +16,11 @@ export async function savePrompt(data: {
   model: string;
   templateUsed?: string;
 }): Promise<string> {
+  if (!auth.currentUser) return "";
+
   const docRef = await addDoc(collection(db, "prompts"), {
     ...data,
-    uid: auth.currentUser?.uid ?? null,
+    uid: auth.currentUser.uid,
     sessionId: getSessionId(),
     createdAt: serverTimestamp(),
   });
@@ -32,11 +34,21 @@ export async function saveGeneration(data: {
   status: "success" | "error";
   errorMessage?: string;
 }): Promise<string> {
+  if (!auth.currentUser) return "";
+
   const docRef = await addDoc(collection(db, "generations"), {
     ...data,
-    uid: auth.currentUser?.uid ?? null,
+    uid: auth.currentUser.uid,
     amxdStoragePath: null,
     createdAt: serverTimestamp(),
   });
   return docRef.id;
+}
+
+export async function updateGenerationStoragePath(
+  generationId: string,
+  storagePath: string,
+): Promise<void> {
+  const docRef = doc(db, "generations", generationId);
+  await updateDoc(docRef, { amxdStoragePath: storagePath });
 }

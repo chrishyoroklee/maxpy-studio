@@ -3,6 +3,7 @@ import type { ChatMessage } from "../hooks/useChat";
 import { downloadBlob } from "../lib/download";
 import { fetchTemplateCode } from "../lib/templates";
 import { rewriteSavePaths } from "../lib/pathRewriter";
+import { CodePatchTabs } from "./CodePatchTabs";
 
 interface Props {
   messages: ChatMessage[];
@@ -197,8 +198,10 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                 </div>
               );
               if (lastAssistant?.error) return (
-                <div className="embedded-status">
-                  <span style={{ color: "var(--error)" }}>Error: {lastAssistant.error}</span>
+                <div className={`embedded-status${lastAssistant.isRateLimited ? " message-rate-limited" : ""}`}>
+                  <span style={{ color: lastAssistant.isRateLimited ? "#d97706" : "var(--error)" }}>
+                    {lastAssistant.isRateLimited ? "Slow down \u2014 " : "Error: "}{lastAssistant.error}
+                  </span>
                 </div>
               );
               if (lastAssistant?.amxdBytes) return (
@@ -229,8 +232,13 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                 </div>
                 <div className="message-content">
                   {msg.content}
+                  {msg.code && (
+                    <CodePatchTabs code={msg.code} />
+                  )}
                   {msg.error && (
-                    <div className="message-error">{msg.error}</div>
+                    <div className={`message-error${msg.isRateLimited ? " message-rate-limited" : ""}`}>
+                      {msg.isRateLimited ? "Slow down \u2014 " : ""}{msg.error}
+                    </div>
                   )}
                   {msg.amxdBytes && (
                     <button

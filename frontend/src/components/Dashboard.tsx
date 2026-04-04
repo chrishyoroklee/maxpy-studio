@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { downloadAmxd } from "../lib/storage";
+import { downloadBlob } from "../lib/download";
 import type { User } from "firebase/auth";
 
 interface Props {
@@ -18,6 +20,7 @@ interface Generation {
   extractedCode: string;
   status: "success" | "error";
   errorMessage?: string;
+  amxdStoragePath?: string;
   createdAt: any;
 }
 
@@ -36,6 +39,8 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user.displayName || "");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadHistory();
@@ -64,7 +69,8 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
         if (batch.length === 0) continue;
         const promptQuery = query(
           collection(db, "prompts"),
-          where("__name__", "in", batch)
+          where("__name__", "in", batch),
+          where("uid", "==", user.uid)
         );
         const promptSnapshot = await getDocs(promptQuery);
         promptSnapshot.docs.forEach(doc => {
@@ -105,6 +111,25 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
     }
     setEditingName(false);
   };
+
+  async function handleDownload(gen: Generation & { promptText?: string; templateUsed?: string }) {
+    if (!gen.amxdStoragePath) {
+      setDownloadError("This generation was created before storage upload was available.");
+      setTimeout(() => setDownloadError(null), 4000);
+      return;
+    }
+    setDownloadingId(gen.id);
+    setDownloadError(null);
+    try {
+      const bytes = await downloadAmxd(gen.amxdStoragePath);
+      downloadBlob(bytes, "device.amxd");
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : "Download failed");
+      setTimeout(() => setDownloadError(null), 4000);
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   const handleDelete = async () => {
     if (confirmDelete) {
@@ -160,6 +185,10 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
           </div>
         </div>
 
+        {downloadError && (
+          <div className="dashboard-error-banner">{downloadError}</div>
+        )}
+
         {/* History */}
         <div className="dashboard-section">
           <div className="dashboard-section-header">
@@ -194,8 +223,12 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
                     </div>
                   </div>
                   {gen.status === "success" ? (
-                    <button className="dashboard-download" onClick={() => {/* TODO: re-download from storage */}}>
-                      Download
+                    <button
+                      className="dashboard-download"
+                      disabled={downloadingId === gen.id}
+                      onClick={() => handleDownload(gen)}
+                    >
+                      {downloadingId === gen.id ? "Downloading..." : "Download"}
                     </button>
                   ) : (
                     <span className="dashboard-failed">Failed</span>

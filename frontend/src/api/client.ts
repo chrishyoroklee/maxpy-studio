@@ -5,6 +5,16 @@ export interface GenerateEvent {
   content?: string;
 }
 
+export class RateLimitError extends Error {
+  retryAfter: number;
+  constructor(retryAfter: number) {
+    const minutes = Math.ceil(retryAfter / 60);
+    super(`Rate limit exceeded. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
+    this.name = "RateLimitError";
+    this.retryAfter = retryAfter;
+  }
+}
+
 /**
  * Stream LLM response from the Cloud Function.
  * Code extraction + execution now happens client-side via Pyodide.
@@ -25,6 +35,19 @@ export async function* streamLLM(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+
+  if (response.status === 429) {
+    let retryAfter = 60;
+    try {
+      const errorBody = await response.json();
+      if (errorBody.retryAfter) {
+        retryAfter = errorBody.retryAfter;
+      }
+    } catch {
+      // Use default retryAfter
+    }
+    throw new RateLimitError(retryAfter);
+  }
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);

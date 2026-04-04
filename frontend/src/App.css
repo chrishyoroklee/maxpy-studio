@@ -1358,3 +1358,102 @@ body {
 .header-avatar:hover {
   opacity: 0.85;
 }
+
+/* ==================== Rate Limit Warning ==================== */
+
+.message-rate-limited {
+  background: rgba(217, 119, 6, 0.1) !important;
+  border-color: rgba(217, 119, 6, 0.3) !important;
+  color: #d97706 !important;
+}
+
+/* ==================== Code/Patch Tabs ==================== */
+
+.code-patch-tabs {
+  margin-top: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm, 8px);
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+
+.tabs-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-base);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-body, "Outfit", sans-serif);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: color 0.15s, background 0.15s;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tab-button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-content {
+  min-height: 120px;
+}
+
+.patch-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 24px;
+  gap: 12px;
+}
+
+.patch-placeholder-icon {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.patch-placeholder-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.code-patch-tabs .code-block {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg-base);
+  overflow-x: auto;
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* ==================== Dashboard Download Error ==================== */
+
+.dashboard-error-banner {
+  padding: 10px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm, 8px);
+  color: #ef4444;
+  font-size: 13px;
+  margin-bottom: 16px;
+}

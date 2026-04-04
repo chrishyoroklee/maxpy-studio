@@ -1,10 +1,16 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { defineSecret } from "firebase-functions/params";
+import { defineSecret, defineInt } from "firebase-functions/params";
 import Anthropic from "@anthropic-ai/sdk";
+import * as admin from "firebase-admin";
 import * as fs from "fs";
 import * as path from "path";
 
+admin.initializeApp();
+const firestore = admin.firestore();
+
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
+const rateLimitPerHour = defineInt("RATE_LIMIT_PER_HOUR", { default: 20 });
+const rateLimitUnauthPerHour = defineInt("RATE_LIMIT_UNAUTH_PER_HOUR", { default: 5 });
 
 // Load system prompt + examples at cold start
 function buildSystemPrompt(): string {
@@ -30,6 +36,38 @@ interface GenerateRequestBody {
   messages?: { role: string; content: string }[];
   template?: string;
   templateCode?: string;
+  uid?: string;
+}
+
+/**
+ * Check rate limit for a user (by uid) or anonymous requester (by IP).
+ * Returns { allowed: true } or { allowed: false, retryAfter: seconds }.
+ */
+async function checkRateLimit(
+  identifier: string,
+  identifierField: "uid" | "ip",
+  limit: number,
+): Promise<{ allowed: true } | { allowed: false; retryAfter: number }> {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const snapshot = await firestore
+    .collection("prompts")
+    .where(identifierField, "==", identifier)
+    .where("createdAt", ">", admin.firestore.Timestamp.fromDate(oneHourAgo))
+    .orderBy("createdAt", "asc")
+    .get();
+
+  if (snapshot.size < limit) {
+    return { allowed: true };
+  }
+
+  const oldestDoc = snapshot.docs[0];
+  const oldestTimestamp = oldestDoc.data().createdAt as admin.firestore.Timestamp;
+  const oldestMs = oldestTimestamp.toMillis();
+  const expiresAt = oldestMs + 60 * 60 * 1000;
+  const retryAfter = Math.max(1, Math.ceil((expiresAt - Date.now()) / 1000));
+
+  return { allowed: false, retryAfter };
 }
 
 export const generateCode = onRequest(
@@ -50,6 +88,30 @@ export const generateCode = onRequest(
     if (!body.prompt) {
       res.status(400).send("Missing prompt");
       return;
+    }
+
+    // --- Rate limiting ---
+    const uid = body.uid || null;
+    const ip = req.ip || req.headers["x-forwarded-for"]?.toString() || "unknown";
+
+    try {
+      let rateLimitResult;
+      if (uid) {
+        rateLimitResult = await checkRateLimit(uid, "uid", rateLimitPerHour.value());
+      } else {
+        rateLimitResult = await checkRateLimit(ip, "ip", rateLimitUnauthPerHour.value());
+      }
+
+      if (!rateLimitResult.allowed) {
+        res.status(429).json({
+          error: "Rate limit exceeded",
+          retryAfter: rateLimitResult.retryAfter,
+        });
+        return;
+      }
+    } catch (rateLimitErr) {
+      // If rate limit check fails, log and proceed (fail-open)
+      console.warn("Rate limit check failed, proceeding:", rateLimitErr);
     }
 
     // Set SSE headers
