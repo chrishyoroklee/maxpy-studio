@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { PatchGraph } from "./PatchGraph";
 import type { PatchGraph as PatchGraphData } from "../lib/patchGraphParser";
 
@@ -13,14 +14,18 @@ export function CodePatchTabs({ code, patchData }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("patch");
   const [fullscreen, setFullscreen] = useState(false);
 
-  // Close fullscreen on Escape
   useEffect(() => {
     if (!fullscreen) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setFullscreen(false);
     };
     document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
+    // Prevent body scroll when fullscreen
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = "";
+    };
   }, [fullscreen]);
 
   const hasPatch = patchData && patchData.nodes.length > 0;
@@ -98,18 +103,17 @@ export function CodePatchTabs({ code, patchData }: Props) {
         </div>
       </div>
 
-      {fullscreen && hasPatch && (
-        <div className="patch-fullscreen-overlay" onClick={() => setFullscreen(false)}>
-          <div className="patch-fullscreen-content" onClick={(e) => e.stopPropagation()}>
-            <button className="patch-fullscreen-close" onClick={() => setFullscreen(false)}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-            <PatchGraph nodes={patchData.nodes} edges={patchData.edges} />
-          </div>
-        </div>
+      {fullscreen && hasPatch && createPortal(
+        <div className="patch-fullscreen-overlay">
+          <button className="patch-fullscreen-close" onClick={() => setFullscreen(false)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+          <PatchGraph nodes={patchData.nodes} edges={patchData.edges} />
+        </div>,
+        document.body
       )}
     </>
   );

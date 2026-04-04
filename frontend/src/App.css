@@ -1452,40 +1452,32 @@ body {
   margin-left: auto;
 }
 
-/* Fullscreen overlay */
+/* Fullscreen overlay — portaled to document.body */
 .patch-fullscreen-overlay {
   position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: stretch;
-  justify-content: stretch;
-}
-
-.patch-fullscreen-content {
-  position: relative;
+  top: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
+  z-index: 9999;
   background: var(--bg-base);
 }
 
-.patch-fullscreen-content .patch-graph {
+.patch-fullscreen-overlay .patch-graph {
   width: 100vw;
   height: 100vh;
 }
 
 .patch-fullscreen-close {
-  position: absolute;
+  position: fixed;
   top: 16px;
   right: 16px;
-  z-index: 1001;
+  z-index: 10000;
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: 8px;
   color: var(--text-primary);
-  padding: 8px;
+  padding: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
