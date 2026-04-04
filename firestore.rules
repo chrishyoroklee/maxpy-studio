@@ -11,6 +11,11 @@ service cloud.firestore {
         allow update, delete: if request.auth != null && request.auth.uid == userId;
       }
 
+      match /events/{eventId} {
+        allow create: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null && request.auth.uid == userId;
+      }
+
       match /generations/{generationId} {
         allow read, create: if request.auth != null && request.auth.uid == userId;
         allow update: if request.auth != null && request.auth.uid == userId;

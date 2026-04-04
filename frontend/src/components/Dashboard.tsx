@@ -3,6 +3,7 @@ import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from "
 import { db } from "../lib/firebase";
 import { downloadAmxd } from "../lib/storage";
 import { downloadBlob } from "../lib/download";
+import { logEvent } from "../lib/firestore";
 import type { User } from "firebase/auth";
 
 interface Props {
@@ -127,6 +128,7 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
       setTimeout(() => setDownloadError(null), 4000);
       return;
     }
+    logEvent("download", { source: "dashboard", generationId: gen.id });
     setDownloadingId(gen.id);
     setDownloadError(null);
     try {

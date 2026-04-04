@@ -84,6 +84,24 @@ export async function saveGeneration(data: {
   return docRef.id;
 }
 
+/**
+ * Log a user event (template click, download, etc.) to users/{uid}/events.
+ */
+export async function logEvent(
+  event: string,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  await addDoc(collection(db, "users", user.uid, "events"), {
+    event,
+    ...metadata,
+    sessionId: getSessionId(),
+    createdAt: serverTimestamp(),
+  }).catch(() => {});
+}
+
 export async function updateGenerationStoragePath(
   uid: string,
   generationId: string,
