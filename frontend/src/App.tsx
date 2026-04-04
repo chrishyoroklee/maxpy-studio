@@ -2,6 +2,7 @@ import { AuthScreen } from "./components/AuthScreen";
 import { Chat } from "./components/Chat";
 import { Dashboard } from "./components/Dashboard";
 import { PluginList } from "./components/PluginList";
+import { loadPlugins } from "./lib/firestore";
 import { useAuth } from "./hooks/useAuth";
 import { useChat } from "./hooks/useChat";
 import { useEmbedded } from "./hooks/useEmbedded";
@@ -18,6 +19,16 @@ function App() {
 
   const [view, setView] = useState<View>("plugins");
   const [activePluginId, setActivePluginId] = useState<string | null>(null);
+  const [activePluginName, setActivePluginName] = useState<string>("");
+
+  // Load active plugin name
+  useEffect(() => {
+    if (!activePluginId) { setActivePluginName(""); return; }
+    loadPlugins().then((plugins) => {
+      const p = plugins.find((x) => x.id === activePluginId);
+      if (p) setActivePluginName(p.name);
+    }).catch(() => {});
+  }, [activePluginId]);
 
   const { messages, isLoading, sendMessage, clearMessages } = useChat(runCode, activePluginId);
 
@@ -103,7 +114,7 @@ function App() {
     return (
       <div className="app">
         <header className="header">
-          <div className="header-left">
+          <div className="header-left header-home" onClick={backToPlugins}>
             <img src="/logo.webp" alt="" className="header-logo" />
             <h1>MaxPy Studio</h1>
           </div>
@@ -150,6 +161,12 @@ function App() {
             </button>
             <img src="/logo.webp" alt="" className="header-logo" />
             <h1>MaxPy Studio</h1>
+            {activePluginName && (
+              <>
+                <span className="header-separator">/</span>
+                <span className="header-plugin-name">{activePluginName}</span>
+              </>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <select
@@ -199,6 +216,7 @@ function App() {
           setModel={handleModelChange}
           runCode={runCode}
           pluginId={activePluginId}
+          pluginName={activePluginName}
         />
       </main>
     </div>

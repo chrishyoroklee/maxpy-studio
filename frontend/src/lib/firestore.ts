@@ -6,6 +6,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   query,
   orderBy,
   increment,
@@ -27,6 +28,15 @@ function getSessionId(): string {
 
 function uid(): string | null {
   return auth.currentUser?.uid ?? null;
+}
+
+/** Strip undefined values — Firestore rejects them. */
+function stripUndefined<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) clean[k] = v;
+  }
+  return clean;
 }
 
 // ---- User doc ----
@@ -82,6 +92,14 @@ export async function createPlugin(name: string, model: string, templateUsed?: s
   }).catch(() => {});
 
   return docRef.id;
+}
+
+export async function loadPlugin(pluginId: string): Promise<PluginDoc | null> {
+  const u = uid();
+  if (!u) return null;
+  const snap = await getDoc(doc(db, "users", u, "plugins", pluginId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as PluginDoc;
 }
 
 export async function loadPlugins(): Promise<PluginDoc[]> {
@@ -146,7 +164,7 @@ export async function saveMessage(
 
   const docRef = await addDoc(
     collection(db, "users", u, "plugins", pluginId, "messages"),
-    { ...data, createdAt: serverTimestamp() }
+    { ...stripUndefined(data as Record<string, unknown>), createdAt: serverTimestamp() }
   );
 
   // Touch plugin updatedAt
@@ -181,7 +199,7 @@ export async function savePrompt(data: {
   if (!u) return "";
 
   const docRef = await addDoc(collection(db, "users", u, "prompts"), {
-    ...data,
+    ...stripUndefined(data as Record<string, unknown>),
     sessionId: getSessionId(),
     createdAt: serverTimestamp(),
   });
@@ -201,7 +219,7 @@ export async function saveGeneration(data: {
   if (!u) return "";
 
   const docRef = await addDoc(collection(db, "users", u, "generations"), {
-    ...data,
+    ...stripUndefined(data as Record<string, unknown>),
     amxdStoragePath: null,
     createdAt: serverTimestamp(),
   });

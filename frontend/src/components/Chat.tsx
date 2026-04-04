@@ -24,6 +24,7 @@ interface Props {
     amxdBytes: Uint8Array | null;
   }>;
   pluginId?: string | null;
+  pluginName?: string;
 }
 
 const SUGGESTIONS = [
@@ -54,7 +55,12 @@ interface TemplateBuild {
   error?: string;
 }
 
-export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, model, setModel, runCode }: Props) {
+function slugify(name: string): string {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "device";
+}
+
+export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, model, setModel, runCode, pluginName }: Props) {
+  const filename = `${slugify(pluginName || "device")}.amxd`;
   const [input, setInput] = useState("");
   const [templateBuild, setTemplateBuild] = useState<TemplateBuild | null>(null);
   const [customizeInput, setCustomizeInput] = useState("");
@@ -154,7 +160,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                   <span className="template-result-label">Base template ready</span>
                   <button
                     className="download-button"
-                    onClick={() => { logEvent("download", { source: "template", template: templateBuild.templateName }); downloadBlob(templateBuild.amxdBytes!, "device.amxd"); }}
+                    onClick={() => { logEvent("download", { source: "template", template: templateBuild.templateName }); downloadBlob(templateBuild.amxdBytes!, filename); }}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -221,7 +227,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
               );
               if (lastAssistant?.error) return (
                 <div className={`embedded-status${lastAssistant.isRateLimited ? " message-rate-limited" : ""}`}>
-                  <span style={{ color: lastAssistant.isRateLimited ? "#d97706" : "var(--error)" }}>
+                  <span style={{ color: lastAssistant.isRateLimited ? "var(--warning)" : "var(--error)" }}>
                     {lastAssistant.isRateLimited ? "Slow down \u2014 " : "Error: "}{lastAssistant.error}
                   </span>
                 </div>
@@ -231,7 +237,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                   <span className="embedded-status-success">Created!</span>
                   <button
                     className="download-button"
-                    onClick={() => { logEvent("download", { source: "embedded" }); downloadBlob(lastAssistant.amxdBytes!, "device.amxd"); }}
+                    onClick={() => { logEvent("download", { source: "embedded" }); downloadBlob(lastAssistant.amxdBytes!, filename); }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -265,7 +271,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                   {msg.amxdBytes && (
                     <button
                       className="download-button"
-                      onClick={() => { logEvent("download", { source: "chat" }); downloadBlob(msg.amxdBytes!, "device.amxd"); }}
+                      onClick={() => { logEvent("download", { source: "chat" }); downloadBlob(msg.amxdBytes!, filename); }}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />

@@ -9,9 +9,10 @@ import {
   updateGenerationStoragePath,
   saveMessage,
   loadMessages,
+  loadPlugin,
   updatePlugin,
 } from "../lib/firestore";
-import { uploadAmxd } from "../lib/storage";
+import { uploadAmxd, downloadAmxd } from "../lib/storage";
 import { auth } from "../lib/firebase";
 import { extractMaxpat } from "../lib/maxpatExtractor";
 import { parsePatchGraph, type PatchGraph } from "../lib/patchGraphParser";
@@ -57,8 +58,10 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
     }
 
     setHistoryLoaded(false);
-    loadMessages(pluginId)
-      .then((docs) => {
+    Promise.all([loadMessages(pluginId), loadPlugin(pluginId)])
+      .then(async ([docs, plugin]) => {
+        console.log("[useChat] Loaded plugin:", plugin);
+        console.log("[useChat] Loaded messages:", docs);
         const loaded: ChatMessage[] = docs.map((d) => ({
           id: d.id,
           role: d.role,
@@ -68,6 +71,52 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           warnings: d.warnings as ValidationIssue[] | undefined,
         }));
         setMessages(loaded);
+
+        // Fallback: if the latest assistant message with code lacks amxdStoragePath,
+        // use the plugin's current amxdStoragePath (for messages saved before the fix)
+        if (plugin?.amxdStoragePath) {
+          for (let i = docs.length - 1; i >= 0; i--) {
+            const d = docs[i];
+            if (d.role === "assistant" && d.code && !d.amxdStoragePath) {
+              console.log("[useChat] Fallback: using plugin storage path for message", d.id);
+              d.amxdStoragePath = plugin.amxdStoragePath;
+              break;
+            }
+          }
+        } else {
+          console.warn("[useChat] No amxdStoragePath on plugin doc");
+        }
+
+        // Restore .amxd bytes + patch data for messages that have a storage path
+        await Promise.all(
+          docs.map(async (d, i) => {
+            if (!d.amxdStoragePath) {
+              console.log("[useChat] No storage path for message", i, d.id);
+              return;
+            }
+            try {
+              console.log("[useChat] Downloading .amxd from", d.amxdStoragePath);
+              const bytes = await downloadAmxd(d.amxdStoragePath);
+              console.log("[useChat] Downloaded", bytes.length, "bytes");
+              let patchData: PatchGraph | undefined;
+              try {
+                const maxpat = extractMaxpat(bytes);
+                patchData = parsePatchGraph(maxpat);
+              } catch (err) {
+                console.warn("[useChat] Failed to extract patch:", err);
+              }
+              setMessages((prev) => {
+                const next = [...prev];
+                if (next[i]) {
+                  next[i] = { ...next[i], amxdBytes: bytes, patchData };
+                }
+                return next;
+              });
+            } catch (err) {
+              console.warn("[useChat] Failed to download .amxd:", err);
+            }
+          })
+        );
       })
       .catch(() => {})
       .finally(() => setHistoryLoaded(true));
@@ -87,7 +136,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
 
       // Save user message to Firestore
       if (pluginId) {
-        saveMessage(pluginId, { role: "user", content: prompt }).catch(() => {});
+        saveMessage(pluginId, { role: "user", content: prompt }).catch((e) => console.warn("Failed to save user message:", e));
       }
 
       // Log prompt (fire and forget)
@@ -136,7 +185,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           );
           // Save error message
           if (pluginId) {
-            saveMessage(pluginId, { role: "assistant", content: fullResponse, error: msg }).catch(() => {});
+            saveMessage(pluginId, { role: "assistant", content: fullResponse, error: msg }).catch((e) => console.warn("Failed to save assistant error:", e));
           }
           return;
         }
@@ -177,30 +226,32 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             extractedCode: rewritten,
             status: "success",
             validationIssues: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
-          }).catch(() => "");
+          }).catch((e) => { console.warn("saveGeneration failed:", e); return ""; });
 
-          // Upload .amxd to Firebase Storage
+          // Upload .amxd to Firebase Storage, then save message with storage path
+          let amxdStoragePath: string | undefined;
           if (generationId && auth.currentUser) {
             const userId = auth.currentUser.uid;
-            uploadAmxd(userId, generationId, result.amxdBytes)
-              .then((storagePath) => {
-                updateGenerationStoragePath(userId, generationId, storagePath);
-                // Update plugin with latest .amxd path and status
-                if (pluginId) {
-                  updatePlugin(pluginId, { status: "ready", amxdStoragePath: storagePath });
-                }
-              })
-              .catch((err) => console.warn("Failed to upload .amxd:", err));
+            try {
+              amxdStoragePath = await uploadAmxd(userId, generationId, result.amxdBytes);
+              updateGenerationStoragePath(userId, generationId, amxdStoragePath).catch(() => {});
+              if (pluginId) {
+                updatePlugin(pluginId, { status: "ready", amxdStoragePath }).catch(() => {});
+              }
+            } catch (err) {
+              console.warn("Failed to upload .amxd:", err);
+            }
           }
 
-          // Save assistant message
+          // Save assistant message with storage path reference
           if (pluginId) {
             saveMessage(pluginId, {
               role: "assistant",
               content: fullResponse,
               code: rewritten,
               warnings: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
-            }).catch(() => {});
+              amxdStoragePath,
+            }).catch((e) => console.warn("Failed to save assistant message:", e));
           }
         } else {
           const errorMsg = `Execution failed:\n${result.stderr}`;
@@ -220,7 +271,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
 
           // Save error message
           if (pluginId) {
-            saveMessage(pluginId, { role: "assistant", content: fullResponse, code: rewritten, error: errorMsg }).catch(() => {});
+            saveMessage(pluginId, { role: "assistant", content: fullResponse, code: rewritten, error: errorMsg }).catch((e) => console.warn("Failed to save assistant error:", e));
           }
         }
       } catch (err) {
