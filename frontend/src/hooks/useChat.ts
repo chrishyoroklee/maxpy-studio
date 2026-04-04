@@ -1,9 +1,13 @@
 import { useState, useCallback, useRef } from "react";
-import { streamLLM } from "../api/client";
+import { streamLLM, RateLimitError } from "../api/client";
 import { extractCode, ExtractionError } from "../lib/extractor";
 import { rewriteSavePaths } from "../lib/pathRewriter";
 import { fetchTemplateCode } from "../lib/templates";
-import { savePrompt, saveGeneration } from "../lib/firestore";
+import { savePrompt, saveGeneration, updateGenerationStoragePath } from "../lib/firestore";
+import { uploadAmxd } from "../lib/storage";
+import { auth } from "../lib/firebase";
+import { extractMaxpat } from "../lib/maxpatExtractor";
+import { parsePatchGraph, type PatchGraph } from "../lib/patchGraphParser";
 
 export interface ChatMessage {
   id: string;
@@ -11,7 +15,9 @@ export interface ChatMessage {
   content: string;
   code?: string;
   amxdBytes?: Uint8Array;
+  patchData?: PatchGraph;
   error?: string;
+  isRateLimited?: boolean;
 }
 
 let msgCounter = 0;
@@ -103,17 +109,34 @@ export function useChat(runCode: RunCodeFn) {
         const result = await runCode(rewritten);
 
         if (result.success && result.amxdBytes) {
+          // Extract patch data for visualization
+          let patchData: PatchGraph | undefined;
+          try {
+            const maxpat = extractMaxpat(result.amxdBytes);
+            patchData = parsePatchGraph(maxpat);
+          } catch {
+            // Patch viz is non-critical — proceed without it
+          }
+
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes! } : m
+              m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes!, patchData } : m
             )
           );
-          saveGeneration({
+          const generationId = await saveGeneration({
             promptId,
             llmResponse: fullResponse,
             extractedCode: rewritten,
             status: "success",
-          }).catch(() => {});
+          }).catch(() => "");
+
+          // Upload .amxd to Firebase Storage (fire and forget)
+          if (generationId && auth.currentUser) {
+            const uid = auth.currentUser.uid;
+            uploadAmxd(uid, generationId, result.amxdBytes)
+              .then((storagePath) => updateGenerationStoragePath(uid, generationId, storagePath))
+              .catch((err) => console.warn("Failed to upload .amxd to storage:", err));
+          }
         } else {
           setMessages((prev) =>
             prev.map((m) =>
@@ -131,10 +154,11 @@ export function useChat(runCode: RunCodeFn) {
           }).catch(() => {});
         }
       } catch (err) {
+        const isRateLimited = err instanceof RateLimitError;
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, error: err instanceof Error ? err.message : "Unknown error" }
+              ? { ...m, error: err instanceof Error ? err.message : "Unknown error", isRateLimited }
               : m
           )
         );

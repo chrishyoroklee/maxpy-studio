@@ -26,3 +26,6 @@ generated/
 .idea/
 *.swp
 .DS_Store
+firestore-debug.log
+ui-debug.log
+.superpowers/

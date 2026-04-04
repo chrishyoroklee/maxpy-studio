@@ -28,7 +28,7 @@ export function usePyodide() {
     async function init() {
       try {
         const pyodide = await loadPyodide({
-          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.5/full/",
+          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/",
         });
 
         await pyodide.loadPackage("micropip");
@@ -76,12 +76,17 @@ export function usePyodide() {
       try { pyodide.FS.mkdir("/output"); } catch { /* already exists */ }
     }
 
-    // Write the amxd helper module into the virtual FS so `from amxd import save_amxd` works.
+    // Fetch amxd.py (not in PyPI maxpylang) and write to virtual FS.
+    const amxdResponse = await fetch("/templates/amxd.py");
+    const amxdCode = await amxdResponse.text();
+    pyodide.FS.writeFile("/output/amxd.py", amxdCode);
+
+    // Add /output to sys.path and set cwd so `from amxd import save_amxd` works.
     await pyodide.runPythonAsync(`
-import os, shutil, importlib
-spec = importlib.util.find_spec("maxpylang.amxd")
-if spec and spec.origin:
-    shutil.copy2(spec.origin, "/output/amxd.py")
+import os, sys
+if "/output" not in sys.path:
+    sys.path.insert(0, "/output")
+os.chdir("/output")
 `);
 
     // Capture stdout/stderr

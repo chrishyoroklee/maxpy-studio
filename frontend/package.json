@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@xyflow/react": "^12.10.2",
     "firebase": "^12.11.0",
     "pyodide": "^0.29.3",
     "react": "^19.2.4",

@@ -3,6 +3,9 @@ import type { ChatMessage } from "../hooks/useChat";
 import { downloadBlob } from "../lib/download";
 import { fetchTemplateCode } from "../lib/templates";
 import { rewriteSavePaths } from "../lib/pathRewriter";
+import { CodePatchTabs } from "./CodePatchTabs";
+import { extractMaxpat } from "../lib/maxpatExtractor";
+import { parsePatchGraph, type PatchGraph } from "../lib/patchGraphParser";
 
 interface Props {
   messages: ChatMessage[];
@@ -42,6 +45,8 @@ interface TemplateBuild {
   status: "building" | "done" | "error";
   templateName: string;
   amxdBytes?: Uint8Array;
+  patchData?: PatchGraph;
+  code?: string;
   error?: string;
 }
 
@@ -59,7 +64,14 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
       const rewritten = rewriteSavePaths(code);
       const result = await runCode(rewritten);
       if (result.success && result.amxdBytes) {
-        setTemplateBuild({ status: "done", templateName, amxdBytes: result.amxdBytes });
+        let patchData: PatchGraph | undefined;
+        try {
+          const maxpat = extractMaxpat(result.amxdBytes);
+          patchData = parsePatchGraph(maxpat);
+        } catch {
+          // Patch viz is non-critical
+        }
+        setTemplateBuild({ status: "done", templateName, amxdBytes: result.amxdBytes, patchData, code: rewritten });
       } else {
         setTemplateBuild({ status: "error", templateName, error: result.stderr || "Build failed" });
       }
@@ -144,6 +156,9 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                     Download .amxd
                   </button>
                 </div>
+                {templateBuild.code && (
+                  <CodePatchTabs code={templateBuild.code} patchData={templateBuild.patchData} />
+                )}
                 {!embedded && (
                   <form className="template-customize" onSubmit={handleCustomize}>
                     <label className="template-customize-label">Want to customize?</label>
@@ -197,8 +212,10 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                 </div>
               );
               if (lastAssistant?.error) return (
-                <div className="embedded-status">
-                  <span style={{ color: "var(--error)" }}>Error: {lastAssistant.error}</span>
+                <div className={`embedded-status${lastAssistant.isRateLimited ? " message-rate-limited" : ""}`}>
+                  <span style={{ color: lastAssistant.isRateLimited ? "#d97706" : "var(--error)" }}>
+                    {lastAssistant.isRateLimited ? "Slow down \u2014 " : "Error: "}{lastAssistant.error}
+                  </span>
                 </div>
               );
               if (lastAssistant?.amxdBytes) return (
@@ -229,8 +246,13 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                 </div>
                 <div className="message-content">
                   {msg.content}
+                  {msg.code && (
+                    <CodePatchTabs code={msg.code} patchData={msg.patchData} />
+                  )}
                   {msg.error && (
-                    <div className="message-error">{msg.error}</div>
+                    <div className={`message-error${msg.isRateLimited ? " message-rate-limited" : ""}`}>
+                      {msg.isRateLimited ? "Slow down \u2014 " : ""}{msg.error}
+                    </div>
                   )}
                   {msg.amxdBytes && (
                     <button
