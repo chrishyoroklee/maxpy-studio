@@ -60,6 +60,8 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
     setHistoryLoaded(false);
     Promise.all([loadMessages(pluginId), loadPlugin(pluginId)])
       .then(async ([docs, plugin]) => {
+        console.log("[useChat] Loaded plugin:", plugin);
+        console.log("[useChat] Loaded messages:", docs);
         const loaded: ChatMessage[] = docs.map((d) => ({
           id: d.id,
           role: d.role,
@@ -76,24 +78,32 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           for (let i = docs.length - 1; i >= 0; i--) {
             const d = docs[i];
             if (d.role === "assistant" && d.code && !d.amxdStoragePath) {
+              console.log("[useChat] Fallback: using plugin storage path for message", d.id);
               d.amxdStoragePath = plugin.amxdStoragePath;
               break;
             }
           }
+        } else {
+          console.warn("[useChat] No amxdStoragePath on plugin doc");
         }
 
         // Restore .amxd bytes + patch data for messages that have a storage path
         await Promise.all(
           docs.map(async (d, i) => {
-            if (!d.amxdStoragePath) return;
+            if (!d.amxdStoragePath) {
+              console.log("[useChat] No storage path for message", i, d.id);
+              return;
+            }
             try {
+              console.log("[useChat] Downloading .amxd from", d.amxdStoragePath);
               const bytes = await downloadAmxd(d.amxdStoragePath);
+              console.log("[useChat] Downloaded", bytes.length, "bytes");
               let patchData: PatchGraph | undefined;
               try {
                 const maxpat = extractMaxpat(bytes);
                 patchData = parsePatchGraph(maxpat);
-              } catch {
-                // non-critical
+              } catch (err) {
+                console.warn("[useChat] Failed to extract patch:", err);
               }
               setMessages((prev) => {
                 const next = [...prev];
@@ -102,8 +112,8 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
                 }
                 return next;
               });
-            } catch {
-              // skip failed downloads
+            } catch (err) {
+              console.warn("[useChat] Failed to download .amxd:", err);
             }
           })
         );
