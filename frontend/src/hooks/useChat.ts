@@ -9,6 +9,7 @@ import {
   updateGenerationStoragePath,
   saveMessage,
   loadMessages,
+  loadPlugin,
   updatePlugin,
 } from "../lib/firestore";
 import { uploadAmxd, downloadAmxd } from "../lib/storage";
@@ -57,8 +58,8 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
     }
 
     setHistoryLoaded(false);
-    loadMessages(pluginId)
-      .then(async (docs) => {
+    Promise.all([loadMessages(pluginId), loadPlugin(pluginId)])
+      .then(async ([docs, plugin]) => {
         const loaded: ChatMessage[] = docs.map((d) => ({
           id: d.id,
           role: d.role,
@@ -68,6 +69,18 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           warnings: d.warnings as ValidationIssue[] | undefined,
         }));
         setMessages(loaded);
+
+        // Fallback: if the latest assistant message with code lacks amxdStoragePath,
+        // use the plugin's current amxdStoragePath (for messages saved before the fix)
+        if (plugin?.amxdStoragePath) {
+          for (let i = docs.length - 1; i >= 0; i--) {
+            const d = docs[i];
+            if (d.role === "assistant" && d.code && !d.amxdStoragePath) {
+              d.amxdStoragePath = plugin.amxdStoragePath;
+              break;
+            }
+          }
+        }
 
         // Restore .amxd bytes + patch data for messages that have a storage path
         await Promise.all(

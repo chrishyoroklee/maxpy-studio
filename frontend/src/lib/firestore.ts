@@ -6,6 +6,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   query,
   orderBy,
   increment,
@@ -82,6 +83,14 @@ export async function createPlugin(name: string, model: string, templateUsed?: s
   }).catch(() => {});
 
   return docRef.id;
+}
+
+export async function loadPlugin(pluginId: string): Promise<PluginDoc | null> {
+  const u = uid();
+  if (!u) return null;
+  const snap = await getDoc(doc(db, "users", u, "plugins", pluginId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as PluginDoc;
 }
 
 export async function loadPlugins(): Promise<PluginDoc[]> {
