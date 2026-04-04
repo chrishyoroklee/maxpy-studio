@@ -689,19 +689,23 @@ body {
 }
 
 .template-back {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
   font-family: var(--font-body);
   cursor: pointer;
-  padding: 0;
+  padding: 10px 20px;
+  border-radius: 8px;
   align-self: flex-start;
-  transition: color 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .template-back:hover {
-  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ==================== Embedded Mode (M4L jweb) ==================== */
