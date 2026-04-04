@@ -1363,6 +1363,49 @@ body {
   opacity: 0.85;
 }
 
+.header-avatar-wrapper {
+  position: relative;
+}
+
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 140px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.header-dropdown button {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.header-dropdown button:hover {
+  background: var(--bg-surface);
+}
+
+.header-dropdown button:last-child {
+  color: #ef4444;
+}
+
+.header-dropdown button:last-child:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
 /* ==================== Rate Limit Warning ==================== */
 
 .message-rate-limited {

@@ -5,7 +5,7 @@ import { useAuth } from "./hooks/useAuth";
 import { useChat } from "./hooks/useChat";
 import { useEmbedded } from "./hooks/useEmbedded";
 import { usePyodide } from "./hooks/usePyodide";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
 function App() {
@@ -67,6 +67,19 @@ function App() {
   }
 
   const initial = user ? (user.displayName || user.email || "?")[0].toUpperCase() : "";
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showMenu]);
 
   // Studio view
   return (
@@ -87,13 +100,24 @@ function App() {
               <option value="claude-opus-4-20250514">Opus 4</option>
             </select>
             {user && (
-              <button
-                className="header-avatar"
-                onClick={() => setView("dashboard")}
-                title="Dashboard"
-              >
-                {initial}
-              </button>
+              <div className="header-avatar-wrapper" ref={menuRef}>
+                <button
+                  className="header-avatar"
+                  onClick={() => setShowMenu(!showMenu)}
+                >
+                  {initial}
+                </button>
+                {showMenu && (
+                  <div className="header-dropdown">
+                    <button onClick={() => { setView("dashboard"); setShowMenu(false); }}>
+                      Dashboard
+                    </button>
+                    <button onClick={() => { logout(); setShowMenu(false); }}>
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </header>
