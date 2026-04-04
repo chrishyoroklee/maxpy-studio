@@ -103,7 +103,7 @@ function App() {
     return (
       <div className="app">
         <header className="header">
-          <div className="header-left">
+          <div className="header-left header-home" onClick={backToPlugins}>
             <img src="/logo.webp" alt="" className="header-logo" />
             <h1>MaxPy Studio</h1>
           </div>

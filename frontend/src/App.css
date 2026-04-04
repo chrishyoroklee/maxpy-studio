@@ -90,6 +90,18 @@ body {
   gap: 10px;
 }
 
+.header-home {
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  transition: opacity 0.15s;
+}
+
+.header-home:hover {
+  opacity: 0.8;
+}
+
 .header-logo {
   width: 28px;
   height: 28px;
