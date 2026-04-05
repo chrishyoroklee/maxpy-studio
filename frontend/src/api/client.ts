@@ -1,6 +1,11 @@
 import { auth } from "../lib/firebase";
 
-const FUNCTIONS_BASE = import.meta.env.VITE_FUNCTIONS_BASE ?? "http://127.0.0.1:5001/maxpylang-studio/us-central1";
+const FUNCTIONS_BASE = import.meta.env.VITE_FUNCTIONS_BASE ?? "http://127.0.0.1:5055/maxpylang-studio/us-central1";
+
+// Build the generateCode URL — supports both emulator (path-based) and Cloud Run (direct URL)
+const GENERATE_URL = FUNCTIONS_BASE.includes("generatecode") || FUNCTIONS_BASE.includes("generateCode")
+  ? FUNCTIONS_BASE
+  : `${FUNCTIONS_BASE}/generateCode`;
 
 export interface GenerateEvent {
   type: "chunk" | "error" | "done";
@@ -37,7 +42,7 @@ export async function* streamLLM(
   const idToken = await auth.currentUser?.getIdToken().catch(() => null);
   if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
 
-  const response = await fetch(`${FUNCTIONS_BASE}/generateCode`, {
+  const response = await fetch(GENERATE_URL, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
