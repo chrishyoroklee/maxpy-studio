@@ -121,6 +121,7 @@ function App() {
           <div className="header-left header-home" onClick={backToPlugins}>
             <img src="/logo.webp" alt="" className="header-logo" />
             <h1>MaxPy Studio</h1>
+            <span className="beta-badge">beta</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {user && (

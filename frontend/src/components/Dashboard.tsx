@@ -40,6 +40,7 @@ export function Dashboard({ user, onBack, onSignOut, onUpdateDisplayName, onDele
         <div className="header-left header-home" onClick={onBack}>
           <img src="/logo.webp" alt="" className="header-logo" />
           <h1>MaxPy Studio</h1>
+          <span className="beta-badge">beta</span>
         </div>
         <button className="header-back" onClick={onBack}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
