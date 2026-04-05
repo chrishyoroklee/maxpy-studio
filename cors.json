@@ -1,0 +1,13 @@
+[
+  {
+    "origin": [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://maxpy-studio.vercel.app",
+      "https://*.vercel.app"
+    ],
+    "method": ["GET", "HEAD", "PUT", "POST"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Authorization", "Content-Length"]
+  }
+]
