@@ -116,7 +116,7 @@ export async function loadPlugins(): Promise<PluginDoc[]> {
 
 export async function updatePlugin(
   pluginId: string,
-  data: Partial<Pick<PluginDoc, "name" | "deviceType" | "status" | "amxdStoragePath" | "model">>,
+  data: Partial<Pick<PluginDoc, "name" | "deviceType" | "status" | "amxdStoragePath" | "model" | "templateUsed">>,
 ): Promise<void> {
   const u = uid();
   if (!u) return;

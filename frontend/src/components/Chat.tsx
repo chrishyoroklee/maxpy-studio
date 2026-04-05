@@ -1,28 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import type { ChatMessage } from "../hooks/useChat";
 import { downloadBlob } from "../lib/download";
-import { fetchTemplateCode } from "../lib/templates";
-import { rewriteSavePaths } from "../lib/pathRewriter";
 import { CodePatchTabs } from "./CodePatchTabs";
-import { extractMaxpat } from "../lib/maxpatExtractor";
-import { parsePatchGraph, type PatchGraph } from "../lib/patchGraphParser";
 import { logEvent } from "../lib/firestore";
-import { validatePatch, type ValidationIssue } from "../lib/patchValidator";
 
 interface Props {
   messages: ChatMessage[];
   isLoading: boolean;
-  onSend: (prompt: string, template?: string) => void;
+  onSend: (prompt: string) => void;
+  onTemplateBuild: (templateName: string, templateLabel: string) => void;
   pyodideReady: boolean;
   embedded?: boolean;
   model?: string;
   setModel?: (model: string) => void;
-  runCode: (code: string) => Promise<{
-    success: boolean;
-    stdout: string;
-    stderr: string;
-    amxdBytes: Uint8Array | null;
-  }>;
   pluginId?: string | null;
   pluginName?: string;
 }
@@ -45,61 +35,19 @@ const MODELS = [
   { value: "claude-opus-4-20250514", label: "Opus 4" },
 ];
 
-interface TemplateBuild {
-  status: "building" | "done" | "error";
-  templateName: string;
-  amxdBytes?: Uint8Array;
-  patchData?: PatchGraph;
-  warnings?: ValidationIssue[];
-  code?: string;
-  error?: string;
-}
-
 function slugify(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "device";
 }
 
-export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, model, setModel, runCode, pluginName }: Props) {
+export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideReady, embedded, model, setModel, pluginName }: Props) {
   const filename = `${slugify(pluginName || "device")}.amxd`;
   const [input, setInput] = useState("");
-  const [templateBuild, setTemplateBuild] = useState<TemplateBuild | null>(null);
-  const [customizeInput, setCustomizeInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleTemplateBuild = async (templateName: string) => {
+  const handleTemplateClick = (templateName: string, templateLabel: string) => {
     logEvent("template_click", { template: templateName });
-    setTemplateBuild({ status: "building", templateName });
-    try {
-      const code = await fetchTemplateCode(templateName);
-      const rewritten = rewriteSavePaths(code);
-      const result = await runCode(rewritten);
-      if (result.success && result.amxdBytes) {
-        let patchData: PatchGraph | undefined;
-        let warnings: ValidationIssue[] | undefined;
-        try {
-          const maxpat = extractMaxpat(result.amxdBytes);
-          const validationResult = validatePatch(maxpat);
-          warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
-          patchData = parsePatchGraph(maxpat);
-        } catch {
-          // Patch viz is non-critical
-        }
-        setTemplateBuild({ status: "done", templateName, amxdBytes: result.amxdBytes, patchData, warnings, code: rewritten });
-      } else {
-        setTemplateBuild({ status: "error", templateName, error: result.stderr || "Build failed" });
-      }
-    } catch (err) {
-      setTemplateBuild({ status: "error", templateName, error: err instanceof Error ? err.message : "Build failed" });
-    }
-  };
-
-  const handleCustomize = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customizeInput.trim() || !templateBuild) return;
-    onSend(customizeInput.trim(), templateBuild.templateName);
-    setCustomizeInput("");
-    setTemplateBuild(null);
+    onTemplateBuild(templateName, templateLabel);
   };
 
   useEffect(() => {
@@ -124,7 +72,7 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
   return (
     <div className="chat-container">
       <div className="messages">
-        {messages.length === 0 && !templateBuild && (
+        {messages.length === 0 && (
           <div className="welcome">
             <h2>MaxPy Studio</h2>
             <p>Describe a plugin. Get an .amxd for Ableton.</p>
@@ -133,85 +81,14 @@ export function Chat({ messages, isLoading, onSend, pyodideReady, embedded, mode
                 <button
                   key={s.label}
                   className="suggestion-card"
-                  disabled={!pyodideReady}
-                  onClick={() => handleTemplateBuild(s.template)}
+                  disabled={!pyodideReady || isLoading}
+                  onClick={() => handleTemplateClick(s.template, s.label)}
                 >
                   <span className="suggestion-label">{s.label}</span>
                   <span className="suggestion-desc">{s.desc}</span>
                 </button>
               ))}
             </div>
-          </div>
-        )}
-
-        {templateBuild && (
-          <div className={embedded ? "embedded-status" : "message assistant"}>
-            {templateBuild.status === "building" && (
-              <div className={embedded ? "" : "message-content"}>
-                <div className="loading-indicator">
-                  <div className="loading-bars"><span /><span /><span /></div>
-                  <span>Building...</span>
-                </div>
-              </div>
-            )}
-            {templateBuild.status === "done" && templateBuild.amxdBytes && (
-              <div className="template-result">
-                <div className="template-result-header">
-                  <span className="template-result-label">Base template ready</span>
-                  <button
-                    className="download-button"
-                    onClick={() => { logEvent("download", { source: "template", template: templateBuild.templateName }); downloadBlob(templateBuild.amxdBytes!, filename); }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Download .amxd
-                  </button>
-                </div>
-                {templateBuild.code && (
-                  <CodePatchTabs code={templateBuild.code} patchData={templateBuild.patchData} warnings={templateBuild.warnings} />
-                )}
-                {!embedded && (
-                  <form className="template-customize" onSubmit={handleCustomize}>
-                    <label className="template-customize-label">Want to customize?</label>
-                    <div className="input-wrapper">
-                      <input
-                        type="text"
-                        value={customizeInput}
-                        onChange={(e) => setCustomizeInput(e.target.value)}
-                        placeholder="e.g. Add a feedback knob, change color to blue..."
-                        className="chat-input"
-                        style={{ minHeight: "auto" }}
-                      />
-                      <button
-                        type="submit"
-                        disabled={!customizeInput.trim() || isLoading}
-                        className="send-button"
-                        aria-label="Customize"
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                          <polyline points="12 5 19 12 12 19" />
-                        </svg>
-                      </button>
-                    </div>
-                  </form>
-                )}
-                <button className="template-back" onClick={() => { setTemplateBuild(null); setCustomizeInput(""); }}>
-                  Back to presets
-                </button>
-              </div>
-            )}
-            {templateBuild.status === "error" && (
-              <div className={embedded ? "" : "message-content"}>
-                <span style={{ color: "var(--error)" }}>Error: {templateBuild.error}</span>
-                <button className="download-button" style={{ marginLeft: 8, background: "transparent", color: "var(--text-secondary)", boxShadow: "none", border: "1px solid var(--border-default)" }} onClick={() => setTemplateBuild(null)}>
-                  Back
-                </button>
-              </div>
-            )}
           </div>
         )}
 

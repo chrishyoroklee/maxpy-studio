@@ -48,12 +48,14 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
+  const templateUsedRef = useRef<string | null>(null);
 
   // Load existing messages when pluginId changes
   useEffect(() => {
     if (!pluginId) {
       setMessages([]);
       setHistoryLoaded(false);
+      templateUsedRef.current = null;
       return;
     }
 
@@ -62,6 +64,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       .then(async ([docs, plugin]) => {
         console.log("[useChat] Loaded plugin:", plugin);
         console.log("[useChat] Loaded messages:", docs);
+        templateUsedRef.current = plugin?.templateUsed ?? null;
         const loaded: ChatMessage[] = docs.map((d) => ({
           id: d.id,
           role: d.role,
@@ -123,7 +126,8 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
   }, [pluginId]);
 
   const sendMessage = useCallback(
-    async (prompt: string, model: string, template?: string) => {
+    async (prompt: string, model: string) => {
+      const template = templateUsedRef.current ?? undefined;
       const history = messagesRef.current.map((m) => ({
         role: m.role,
         content: m.content,
@@ -291,7 +295,121 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
     [runCode, pluginId]
   );
 
-  const clearMessages = useCallback(() => setMessages([]), []);
+  const buildTemplate = useCallback(
+    async (templateName: string, templateLabel: string, model: string) => {
+      const userMsg: ChatMessage = { id: nextId(), role: "user", content: `Build ${templateLabel} template` };
+      const assistantMsg: ChatMessage = { id: nextId(), role: "assistant", content: "" };
+      setMessages((prev) => [...prev, userMsg, assistantMsg]);
+      setIsLoading(true);
 
-  return { messages, isLoading, sendMessage, clearMessages, historyLoaded };
+      if (pluginId) {
+        saveMessage(pluginId, { role: "user", content: userMsg.content }).catch((e) => console.warn("Failed to save user message:", e));
+      }
+
+      const promptId = await savePrompt({
+        prompt: userMsg.content,
+        model,
+        templateUsed: templateName,
+        pluginId: pluginId || undefined,
+      }).catch(() => "");
+
+      const assistantId = assistantMsg.id;
+
+      try {
+        const code = await fetchTemplateCode(templateName);
+        const rewritten = rewriteSavePaths(code);
+
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, code: rewritten } : m))
+        );
+
+        const result = await runCode(rewritten);
+
+        if (result.success && result.amxdBytes) {
+          let patchData: PatchGraph | undefined;
+          let warnings: ValidationIssue[] | undefined;
+          try {
+            const maxpat = extractMaxpat(result.amxdBytes);
+            const validationResult = validatePatch(maxpat);
+            warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
+            patchData = parsePatchGraph(maxpat);
+          } catch {
+            // non-critical
+          }
+
+          const content = "Base template ready.";
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content, amxdBytes: result.amxdBytes!, patchData, warnings }
+                : m
+            )
+          );
+
+          const generationId = await saveGeneration({
+            promptId,
+            pluginId: pluginId || undefined,
+            llmResponse: content,
+            extractedCode: rewritten,
+            status: "success",
+            validationIssues: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
+          }).catch((e) => { console.warn("saveGeneration failed:", e); return ""; });
+
+          let amxdStoragePath: string | undefined;
+          if (generationId && auth.currentUser) {
+            const userId = auth.currentUser.uid;
+            try {
+              amxdStoragePath = await uploadAmxd(userId, generationId, result.amxdBytes);
+              updateGenerationStoragePath(userId, generationId, amxdStoragePath).catch(() => {});
+              if (pluginId) {
+                updatePlugin(pluginId, { status: "ready", amxdStoragePath, templateUsed: templateName }).catch(() => {});
+              }
+            } catch (err) {
+              console.warn("Failed to upload template .amxd:", err);
+            }
+          }
+
+          templateUsedRef.current = templateName;
+
+          if (pluginId) {
+            saveMessage(pluginId, {
+              role: "assistant",
+              content,
+              code: rewritten,
+              warnings: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
+              amxdStoragePath,
+            }).catch((e) => console.warn("Failed to save assistant message:", e));
+          }
+        } else {
+          const errorMsg = result.stderr || "Template build failed";
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, error: errorMsg, code: rewritten } : m))
+          );
+          if (pluginId) {
+            saveMessage(pluginId, {
+              role: "assistant",
+              content: "",
+              code: rewritten,
+              error: errorMsg,
+            }).catch((e) => console.warn("Failed to save assistant error:", e));
+          }
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : "Template build failed";
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, error: errorMsg } : m))
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [runCode, pluginId]
+  );
+
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+    templateUsedRef.current = null;
+  }, []);
+
+  return { messages, isLoading, sendMessage, buildTemplate, clearMessages, historyLoaded };
 }
