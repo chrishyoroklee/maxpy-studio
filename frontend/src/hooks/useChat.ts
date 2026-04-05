@@ -17,6 +17,34 @@ import { auth } from "../lib/firebase";
 import { extractMaxpat } from "../lib/maxpatExtractor";
 import { parsePatchGraph, type PatchGraph } from "../lib/patchGraphParser";
 import { validatePatch, type ValidationIssue } from "../lib/patchValidator";
+import { convertToSubpatcher, serializeSubpatcher } from "../lib/subpatcherSaver";
+
+// jweb bridge to Max
+declare global {
+  interface Window {
+    max?: {
+      outlet: (...args: unknown[]) => void;
+      bindInlet: (name: string, cb: (...args: unknown[]) => void) => void;
+    };
+  }
+}
+
+function sendToMax(maxpat: ReturnType<typeof extractMaxpat>): void {
+  if (typeof window === "undefined" || !window.max) return;
+  try {
+    const subpatcher = convertToSubpatcher(maxpat);
+    const json = serializeSubpatcher(subpatcher);
+    window.max.outlet("load", json);
+  } catch (err) {
+    console.warn("Failed to send patcher to Max:", err);
+  }
+}
+
+function isM4LMode(): boolean {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("embedded") === "m4l";
+}
 
 export interface ChatMessage {
   id: string;
@@ -213,6 +241,8 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             const validationResult = validatePatch(maxpat);
             warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
             patchData = parsePatchGraph(maxpat);
+            // In M4L mode, send the patcher to Max for inline loading
+            if (isM4LMode()) sendToMax(maxpat);
           } catch {
             // Patch viz is non-critical
           }
@@ -333,6 +363,8 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             const validationResult = validatePatch(maxpat);
             warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
             patchData = parsePatchGraph(maxpat);
+            // In M4L mode, send the patcher to Max for inline loading
+            if (isM4LMode()) sendToMax(maxpat);
           } catch {
             // non-critical
           }

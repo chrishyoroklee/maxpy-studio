@@ -3,6 +3,7 @@ import type { ChatMessage } from "../hooks/useChat";
 import { downloadBlob } from "../lib/download";
 import { CodePatchTabs } from "./CodePatchTabs";
 import { logEvent } from "../lib/firestore";
+import { useEmbedMode } from "../hooks/useEmbedded";
 
 interface Props {
   messages: ChatMessage[];
@@ -40,6 +41,8 @@ function slugify(name: string): string {
 }
 
 export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideReady, embedded, model, setModel, pluginName }: Props) {
+  const embedMode = useEmbedMode();
+  const isM4L = embedMode === "m4l";
   const filename = `${slugify(pluginName || "device")}.amxd`;
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -111,18 +114,20 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
               );
               if (lastAssistant?.amxdBytes) return (
                 <div className="embedded-status">
-                  <span className="embedded-status-success">Created!</span>
-                  <button
-                    className="download-button"
-                    onClick={() => { logEvent("download", { source: "embedded" }); downloadBlob(lastAssistant.amxdBytes!, filename); }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Download .amxd
-                  </button>
+                  <span className="embedded-status-success">{isM4L ? "Loaded into device" : "Created!"}</span>
+                  {!isM4L && (
+                    <button
+                      className="download-button"
+                      onClick={() => { logEvent("download", { source: "embedded" }); downloadBlob(lastAssistant.amxdBytes!, filename); }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Download .amxd
+                    </button>
+                  )}
                 </div>
               );
               return null;
@@ -145,7 +150,7 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                       {msg.isRateLimited ? "Slow down \u2014 " : ""}{msg.error}
                     </div>
                   )}
-                  {msg.amxdBytes && (
+                  {msg.amxdBytes && !isM4L && (
                     <button
                       className="download-button"
                       onClick={() => { logEvent("download", { source: "chat" }); downloadBlob(msg.amxdBytes!, filename); }}
@@ -157,6 +162,9 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                       </svg>
                       Download .amxd
                     </button>
+                  )}
+                  {msg.amxdBytes && isM4L && (
+                    <div className="m4l-loaded-badge">✓ Loaded into device</div>
                   )}
                 </div>
               </div>
