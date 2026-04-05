@@ -30,7 +30,7 @@ function App() {
     }).catch(() => {});
   }, [activePluginId]);
 
-  const { messages, isLoading, sendMessage, clearMessages } = useChat(runCode, activePluginId);
+  const { messages, isLoading, sendMessage, buildTemplate, clearMessages } = useChat(runCode, activePluginId);
 
   const [model, setModel] = useState(
     () => sessionStorage.getItem("maxpy-model") ?? "claude-sonnet-4-20250514"
@@ -54,8 +54,12 @@ function App() {
     sessionStorage.setItem("maxpy-model", m);
   };
 
-  const handleSend = (prompt: string, template?: string) => {
-    sendMessage(prompt, model, template);
+  const handleSend = (prompt: string) => {
+    sendMessage(prompt, model);
+  };
+
+  const handleTemplateBuild = (templateName: string, templateLabel: string) => {
+    buildTemplate(templateName, templateLabel, model);
   };
 
   const openPlugin = (pluginId: string) => {
@@ -210,11 +214,11 @@ function App() {
           messages={messages}
           isLoading={isLoading}
           onSend={handleSend}
+          onTemplateBuild={handleTemplateBuild}
           pyodideReady={ready}
           embedded={embedded}
           model={model}
           setModel={handleModelChange}
-          runCode={runCode}
           pluginId={activePluginId}
           pluginName={activePluginName}
         />
