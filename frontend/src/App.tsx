@@ -174,16 +174,6 @@ function App() {
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <select
-              value={model}
-              onChange={(e) => handleModelChange(e.target.value)}
-              className="model-select"
-            >
-              <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
-              <option value="anthropic/claude-opus-4">Claude Opus 4</option>
-              <option value="openai/gpt-4o">GPT-4o</option>
-              <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro</option>
-            </select>
             {user && (
               <div className="header-avatar-wrapper" ref={menuRef}>
                 <button className="header-avatar" onClick={() => setShowMenu(!showMenu)}>
