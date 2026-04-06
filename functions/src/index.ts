@@ -1,6 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret, defineInt } from "firebase-functions/params";
-import Anthropic from "@anthropic-ai/sdk";
 import * as admin from "firebase-admin";
 import * as fs from "fs";
 import * as path from "path";
@@ -8,9 +7,8 @@ import * as path from "path";
 admin.initializeApp();
 const firestore = admin.firestore();
 
-const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
+const openrouterApiKey = defineSecret("OPENROUTER_API_KEY");
 const rateLimitPerHour = defineInt("RATE_LIMIT_PER_HOUR", { default: 20 });
-
 
 // Load system prompt + examples at cold start
 function buildSystemPrompt(): string {
@@ -38,10 +36,6 @@ interface GenerateRequestBody {
   templateCode?: string;
 }
 
-/**
- * Verify Firebase Auth ID token from Authorization header.
- * Returns the uid if valid, null otherwise.
- */
 async function verifyAuthToken(authHeader: string | undefined): Promise<string | null> {
   if (!authHeader?.startsWith("Bearer ")) return null;
   try {
@@ -53,9 +47,6 @@ async function verifyAuthToken(authHeader: string | undefined): Promise<string |
   }
 }
 
-/**
- * Check rate limit for an authenticated user by querying their prompts subcollection.
- */
 async function checkUserRateLimit(
   uid: string,
   limit: number,
@@ -83,7 +74,7 @@ async function checkUserRateLimit(
 
 export const generateCode = onRequest(
   {
-    secrets: [anthropicApiKey],
+    secrets: [openrouterApiKey],
     timeoutSeconds: 300,
     memory: "256MiB",
     cors: true,
@@ -116,7 +107,6 @@ export const generateCode = onRequest(
           return;
         }
       } catch (rateLimitErr) {
-        // If rate limit check fails, log and proceed (fail-open)
         console.warn("Rate limit check failed, proceeding:", rateLimitErr);
       }
     }
@@ -138,34 +128,72 @@ export const generateCode = onRequest(
         "My modification request: " + body.prompt;
     }
 
-    const messages: Anthropic.MessageParam[] = [
+    const messages = [
+      { role: "system", content: systemPrompt },
       ...(body.messages || []).map((m) => ({
-        role: m.role as "user" | "assistant",
+        role: m.role,
         content: m.content,
       })),
-      { role: "user" as const, content: userContent },
+      { role: "user", content: userContent },
     ];
 
-    const model = body.model || "claude-sonnet-4-20250514";
+    const model = body.model || "anthropic/claude-sonnet-4";
 
     try {
-      const client = new Anthropic({ apiKey: anthropicApiKey.value() });
-
-      const stream = await client.messages.stream({
-        model,
-        max_tokens: 8192,
-        temperature: 0.3,
-        system: systemPrompt,
-        messages,
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openrouterApiKey.value()}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://maxpy-studio.vercel.app",
+          "X-Title": "MaxPy Studio",
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: 8192,
+          temperature: 0.3,
+          stream: true,
+        }),
       });
 
-      for await (const event of stream) {
-        if (
-          event.type === "content_block_delta" &&
-          event.delta.type === "text_delta"
-        ) {
-          const data = JSON.stringify({ type: "chunk", content: event.delta.text });
-          res.write(`data: ${data}\n\n`);
+      if (!response.ok) {
+        const errText = await response.text();
+        res.write(`data: ${JSON.stringify({ type: "error", content: `${response.status} ${errText}` })}\n\n`);
+        res.end();
+        return;
+      }
+
+      const reader = response.body as any;
+      if (!reader) {
+        res.write(`data: ${JSON.stringify({ type: "error", content: "No response body" })}\n\n`);
+        res.end();
+        return;
+      }
+
+      // Parse OpenAI-format SSE stream
+      let buffer = "";
+      const decoder = new TextDecoder();
+
+      for await (const chunk of reader) {
+        buffer += typeof chunk === "string" ? chunk : decoder.decode(chunk, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const payload = line.slice(6).trim();
+            if (payload === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(payload);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                res.write(`data: ${JSON.stringify({ type: "chunk", content })}\n\n`);
+              }
+            } catch {
+              // skip malformed chunks
+            }
+          }
         }
       }
 
