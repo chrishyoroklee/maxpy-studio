@@ -182,132 +182,168 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           templateCode = await fetchTemplateCode(template);
         }
 
-        // Phase 1: Stream LLM response
-        let fullResponse = "";
-        for await (const event of streamLLM(prompt, model, history, template, templateCode)) {
-          if (event.type === "chunk") {
-            fullResponse += event.content || "";
+        const MAX_RETRIES = 2;
+        let lastError = "";
+        let lastCode = "";
+
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+          // On retry, reset the assistant message and build error-fix prompt
+          let currentPrompt = prompt;
+          let currentHistory = history;
+          if (attempt > 0) {
+            console.log(`[useChat] Retry attempt ${attempt}/${MAX_RETRIES}`);
+            currentPrompt = `Your previous code produced this error:\n\`\`\`\n${lastError}\n\`\`\`\n\nHere was the code:\n\`\`\`python\n${lastCode}\n\`\`\`\n\nFix the issue and output the complete corrected Python code. Make sure all objects exist in Max/MSP and all inlet/outlet indices are valid.`;
+            // Include the failed exchange in history so LLM has full context
+            currentHistory = [
+              ...history,
+              { role: "user", content: prompt },
+              { role: "assistant", content: "```python\n" + lastCode + "\n```" },
+            ];
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
-                  ? { ...m, content: m.content + (event.content || "") }
+                  ? { ...m, content: attempt === 1 ? "Refining..." : "Retrying...", error: undefined, code: undefined }
                   : m
               )
             );
-          } else if (event.type === "error") {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId ? { ...m, error: event.content } : m
-              )
-            );
-            return;
-          }
-        }
-
-        // Phase 2: Extract code
-        let code: string;
-        try {
-          code = extractCode(fullResponse);
-        } catch (err) {
-          const msg = err instanceof ExtractionError ? err.message : "Code extraction failed";
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId ? { ...m, error: msg } : m
-            )
-          );
-          // Save error message
-          if (pluginId) {
-            saveMessage(pluginId, { role: "assistant", content: fullResponse, error: msg }).catch((e) => console.warn("Failed to save assistant error:", e));
-          }
-          return;
-        }
-
-        // Phase 3: Rewrite paths and execute in Pyodide
-        const rewritten = rewriteSavePaths(code);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, code: rewritten } : m
-          )
-        );
-
-        const result = await runCode(rewritten);
-
-        if (result.success && result.amxdBytes) {
-          // Extract patch data for visualization and validate
-          let patchData: PatchGraph | undefined;
-          let warnings: ValidationIssue[] | undefined;
-          try {
-            const maxpat = extractMaxpat(result.amxdBytes);
-            const validationResult = validatePatch(maxpat);
-            warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
-            patchData = parsePatchGraph(maxpat);
-            // In M4L mode, send the patcher to Max for inline loading
-            if (isM4LMode()) sendToMax(maxpat);
-          } catch {
-            // Patch viz is non-critical
           }
 
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes!, patchData, warnings } : m
-            )
-          );
-
-          const generationId = await saveGeneration({
-            promptId,
-            pluginId: pluginId || undefined,
-            llmResponse: fullResponse,
-            extractedCode: rewritten,
-            status: "success",
-            validationIssues: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
-          }).catch((e) => { console.warn("saveGeneration failed:", e); return ""; });
-
-          // Upload .amxd to Firebase Storage, then save message with storage path
-          let amxdStoragePath: string | undefined;
-          if (generationId && auth.currentUser) {
-            const userId = auth.currentUser.uid;
-            try {
-              amxdStoragePath = await uploadAmxd(userId, generationId, result.amxdBytes);
-              updateGenerationStoragePath(userId, generationId, amxdStoragePath).catch(() => {});
-              if (pluginId) {
-                updatePlugin(pluginId, { status: "ready", amxdStoragePath }).catch(() => {});
-              }
-            } catch (err) {
-              console.warn("Failed to upload .amxd:", err);
+          // Phase 1: Stream LLM response
+          let fullResponse = "";
+          let streamError = false;
+          for await (const event of streamLLM(currentPrompt, model, currentHistory, attempt === 0 ? template : undefined, attempt === 0 ? templateCode : undefined)) {
+            if (event.type === "chunk") {
+              fullResponse += event.content || "";
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, content: fullResponse }
+                    : m
+                )
+              );
+            } else if (event.type === "error") {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId ? { ...m, error: event.content } : m
+                )
+              );
+              streamError = true;
+              break;
             }
           }
+          if (streamError) return; // Don't retry API/network errors
 
-          // Save assistant message with storage path reference
-          if (pluginId) {
-            saveMessage(pluginId, {
-              role: "assistant",
-              content: fullResponse,
-              code: rewritten,
-              warnings: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
-              amxdStoragePath,
-            }).catch((e) => console.warn("Failed to save assistant message:", e));
+          // Phase 2: Extract code
+          let code: string;
+          try {
+            code = extractCode(fullResponse);
+          } catch (err) {
+            const msg = err instanceof ExtractionError ? err.message : "Code extraction failed";
+            lastError = msg;
+            lastCode = "";
+            if (attempt < MAX_RETRIES) continue; // Retry
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, error: msg } : m
+              )
+            );
+            if (pluginId) {
+              saveMessage(pluginId, { role: "assistant", content: fullResponse, error: msg }).catch((e) => console.warn("Failed to save assistant error:", e));
+            }
+            return;
           }
-        } else {
-          const errorMsg = `Execution failed:\n${result.stderr}`;
+
+          // Phase 3: Rewrite paths and execute in Pyodide
+          const rewritten = rewriteSavePaths(code);
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, error: errorMsg } : m
+              m.id === assistantId ? { ...m, code: rewritten } : m
             )
           );
-          saveGeneration({
-            promptId,
-            pluginId: pluginId || undefined,
-            llmResponse: fullResponse,
-            extractedCode: rewritten,
-            status: "error",
-            errorMessage: result.stderr,
-          }).catch(() => {});
 
-          // Save error message
-          if (pluginId) {
-            saveMessage(pluginId, { role: "assistant", content: fullResponse, code: rewritten, error: errorMsg }).catch((e) => console.warn("Failed to save assistant error:", e));
+          const result = await runCode(rewritten);
+
+          if (result.success && result.amxdBytes) {
+            // SUCCESS — extract patch data, save, and return
+            let patchData: PatchGraph | undefined;
+            let warnings: ValidationIssue[] | undefined;
+            try {
+              const maxpat = extractMaxpat(result.amxdBytes);
+              const validationResult = validatePatch(maxpat);
+              warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
+              patchData = parsePatchGraph(maxpat);
+              if (isM4LMode()) sendToMax(maxpat);
+            } catch {
+              // Patch viz is non-critical
+            }
+
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes!, patchData, warnings, content: fullResponse } : m
+              )
+            );
+
+            const generationId = await saveGeneration({
+              promptId,
+              pluginId: pluginId || undefined,
+              llmResponse: fullResponse,
+              extractedCode: rewritten,
+              status: "success",
+              validationIssues: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
+            }).catch((e) => { console.warn("saveGeneration failed:", e); return ""; });
+
+            let amxdStoragePath: string | undefined;
+            if (generationId && auth.currentUser) {
+              const userId = auth.currentUser.uid;
+              try {
+                amxdStoragePath = await uploadAmxd(userId, generationId, result.amxdBytes);
+                updateGenerationStoragePath(userId, generationId, amxdStoragePath).catch(() => {});
+                if (pluginId) {
+                  updatePlugin(pluginId, { status: "ready", amxdStoragePath }).catch(() => {});
+                }
+              } catch (err) {
+                console.warn("Failed to upload .amxd:", err);
+              }
+            }
+
+            if (pluginId) {
+              saveMessage(pluginId, {
+                role: "assistant",
+                content: fullResponse,
+                code: rewritten,
+                warnings: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
+                amxdStoragePath,
+              }).catch((e) => console.warn("Failed to save assistant message:", e));
+            }
+            return; // Done — success
           }
-        }
+
+          // FAIL — capture error for retry
+          lastError = result.stderr;
+          lastCode = rewritten;
+
+          if (attempt === MAX_RETRIES) {
+            // Final failure — show error
+            const errorMsg = `Execution failed:\n${result.stderr}`;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, error: errorMsg, content: fullResponse } : m
+              )
+            );
+            saveGeneration({
+              promptId,
+              pluginId: pluginId || undefined,
+              llmResponse: fullResponse,
+              extractedCode: rewritten,
+              status: "error",
+              errorMessage: result.stderr,
+            }).catch(() => {});
+
+            if (pluginId) {
+              saveMessage(pluginId, { role: "assistant", content: fullResponse, code: rewritten, error: errorMsg }).catch((e) => console.warn("Failed to save assistant error:", e));
+            }
+          }
+        } // end retry loop
       } catch (err) {
         const isRateLimited = err instanceof RateLimitError;
         const errorMsg = err instanceof Error ? err.message : "Unknown error";
