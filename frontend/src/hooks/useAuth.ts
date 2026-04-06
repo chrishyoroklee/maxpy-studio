@@ -7,6 +7,7 @@ import {
   GoogleAuthProvider,
   signOut,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile,
   deleteUser,
   type User,
@@ -39,7 +40,21 @@ export function useAuth() {
     if (displayName) {
       await updateProfile(cred.user, { displayName });
     }
+    await sendEmailVerification(cred.user);
     return cred;
+  }, []);
+
+  const resendVerification = useCallback(async () => {
+    if (auth.currentUser && !auth.currentUser.emailVerified) {
+      await sendEmailVerification(auth.currentUser);
+    }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    if (auth.currentUser) {
+      await auth.currentUser.reload();
+      setUser({ ...auth.currentUser } as User);
+    }
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
@@ -75,6 +90,8 @@ export function useAuth() {
     signInWithGoogle,
     logout,
     resetPassword,
+    resendVerification,
+    refreshUser,
     updateDisplayName,
     deleteAccount,
   };
