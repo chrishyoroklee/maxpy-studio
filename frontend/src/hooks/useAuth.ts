@@ -3,7 +3,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
   GoogleAuthProvider,
   signOut,
   sendPasswordResetEmail,
@@ -43,7 +43,7 @@ export function useAuth() {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    return signInWithPopup(auth, googleProvider);
+    return signInWithRedirect(auth, googleProvider);
   }, []);
 
   const logout = useCallback(async () => {
