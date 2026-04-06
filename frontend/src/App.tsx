@@ -33,7 +33,7 @@ function App() {
   const { messages, isLoading, sendMessage, buildTemplate, clearMessages } = useChat(runCode, activePluginId);
 
   const [model, setModel] = useState(
-    () => sessionStorage.getItem("maxpy-model") ?? "claude-sonnet-4-20250514"
+    () => sessionStorage.getItem("maxpy-model") ?? "anthropic/claude-sonnet-4"
   );
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -179,8 +179,10 @@ function App() {
               onChange={(e) => handleModelChange(e.target.value)}
               className="model-select"
             >
-              <option value="claude-sonnet-4-20250514">Sonnet 4</option>
-              <option value="claude-opus-4-20250514">Opus 4</option>
+              <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
+              <option value="anthropic/claude-opus-4">Claude Opus 4</option>
+              <option value="openai/gpt-4o">GPT-4o</option>
+              <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro</option>
             </select>
             {user && (
               <div className="header-avatar-wrapper" ref={menuRef}>
