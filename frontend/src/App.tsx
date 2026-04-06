@@ -14,7 +14,7 @@ type View = "plugins" | "workspace" | "settings";
 
 function App() {
   const embedded = useEmbedded();
-  const { user, loading: authLoading, signIn, signUp, signInWithGoogle, logout, resetPassword, updateDisplayName, deleteAccount } = useAuth();
+  const { user, loading: authLoading, signIn, signUp, signInWithGoogle, logout, resetPassword, resendVerification, refreshUser, updateDisplayName, deleteAccount } = useAuth();
   const { ready, loading: pyodideLoading, error: pyodideError, runCode } = usePyodide();
 
   const [view, setView] = useState<View>("plugins");
@@ -92,6 +92,29 @@ function App() {
           signInWithGoogle={signInWithGoogle}
           resetPassword={resetPassword}
         />
+      </div>
+    );
+  }
+
+  // Email not verified — show verification screen (Google users are auto-verified)
+  if (user && !user.emailVerified && user.providerData[0]?.providerId === "password" && !embedded) {
+    return (
+      <div className="app" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+        <div className="verify-email-card">
+          <h2>Check your email</h2>
+          <p>We sent a verification link to <strong>{user.email}</strong>. Click the link to activate your account.</p>
+          <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+            <button className="modal-confirm" onClick={refreshUser}>
+              I've verified
+            </button>
+            <button className="modal-cancel" onClick={() => resendVerification()}>
+              Resend email
+            </button>
+          </div>
+          <button style={{ marginTop: 16, background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 13 }} onClick={logout}>
+            Sign out
+          </button>
+        </div>
       </div>
     );
   }
