@@ -112,7 +112,7 @@ function App() {
             </button>
           </div>
           <button style={{ marginTop: 16, background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 13 }} onClick={logout}>
-            Sign out
+            Use a different account
           </button>
         </div>
       </div>
