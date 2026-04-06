@@ -1853,6 +1853,24 @@ textarea:focus-visible {
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 6px;
+  cursor: text;
+}
+
+.plugin-rename-form {
+  margin-bottom: 6px;
+}
+
+.plugin-rename-input {
+  width: 100%;
+  background: var(--bg-base);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 2px 6px;
+  outline: none;
 }
 
 .plugin-card-meta {

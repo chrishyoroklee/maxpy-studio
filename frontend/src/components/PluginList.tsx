@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { loadPlugins, createPlugin, deletePlugin, type PluginDoc } from "../lib/firestore";
+import { loadPlugins, createPlugin, deletePlugin, updatePlugin, type PluginDoc } from "../lib/firestore";
 
 interface Props {
   onOpen: (pluginId: string) => void;
@@ -13,6 +13,8 @@ export function PluginList({ onOpen, defaultModel }: Props) {
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameName, setRenameName] = useState("");
 
   useEffect(() => {
     loadPlugins()
@@ -40,6 +42,15 @@ export function PluginList({ onOpen, defaultModel }: Props) {
     await deletePlugin(pluginId);
     setPlugins((prev) => prev.filter((p) => p.id !== pluginId));
     setDeleteId(null);
+  };
+
+  const handleRename = async (pluginId: string) => {
+    const trimmed = renameName.trim();
+    if (!trimmed) return;
+    await updatePlugin(pluginId, { name: trimmed });
+    setPlugins((prev) => prev.map((p) => p.id === pluginId ? { ...p, name: trimmed } : p));
+    setRenameId(null);
+    setRenameName("");
   };
 
   return (
@@ -101,7 +112,22 @@ export function PluginList({ onOpen, defaultModel }: Props) {
                   )}
                 </button>
               </div>
-              <div className="plugin-card-name">{plugin.name}</div>
+              {renameId === plugin.id ? (
+                <form className="plugin-rename-form" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); handleRename(plugin.id); }} onClick={(e) => e.stopPropagation()}>
+                  <input
+                    className="plugin-rename-input"
+                    value={renameName}
+                    onChange={(e) => setRenameName(e.target.value)}
+                    onBlur={() => { setRenameId(null); setRenameName(""); }}
+                    onKeyDown={(e) => { if (e.key === "Escape") { setRenameId(null); setRenameName(""); } }}
+                    autoFocus
+                  />
+                </form>
+              ) : (
+                <div className="plugin-card-name" onDoubleClick={(e) => { e.stopPropagation(); setRenameId(plugin.id); setRenameName(plugin.name); }}>
+                  {plugin.name}
+                </div>
+              )}
               <div className="plugin-card-meta">
                 {plugin.templateUsed ? plugin.templateUsed.replace("m4l_", "").replace(/_/g, " ") : "From scratch"}
                 {plugin.updatedAt?.toDate && (
