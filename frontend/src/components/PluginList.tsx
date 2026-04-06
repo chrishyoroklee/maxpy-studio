@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { loadPlugins, createPlugin, deletePlugin, updatePlugin, type PluginDoc } from "../lib/firestore";
 
 interface Props {
@@ -12,9 +12,11 @@ export function PluginList({ onOpen, defaultModel }: Props) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadPlugins()
@@ -22,6 +24,18 @@ export function PluginList({ onOpen, defaultModel }: Props) {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuId) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [menuId]);
 
   const handleCreate = async () => {
     const name = newName.trim() || "Untitled Plugin";
@@ -41,16 +55,27 @@ export function PluginList({ onOpen, defaultModel }: Props) {
   const handleDelete = async (pluginId: string) => {
     await deletePlugin(pluginId);
     setPlugins((prev) => prev.filter((p) => p.id !== pluginId));
-    setDeleteId(null);
+    setDeleteConfirmId(null);
   };
 
   const handleRename = async (pluginId: string) => {
     const trimmed = renameName.trim();
-    if (!trimmed) return;
+    if (!trimmed) { setRenameId(null); return; }
     await updatePlugin(pluginId, { name: trimmed });
     setPlugins((prev) => prev.map((p) => p.id === pluginId ? { ...p, name: trimmed } : p));
     setRenameId(null);
     setRenameName("");
+  };
+
+  const openRename = (plugin: PluginDoc) => {
+    setMenuId(null);
+    setRenameId(plugin.id);
+    setRenameName(plugin.name);
+  };
+
+  const openDeleteConfirm = (pluginId: string) => {
+    setMenuId(null);
+    setDeleteConfirmId(pluginId);
   };
 
   return (
@@ -91,43 +116,26 @@ export function PluginList({ onOpen, defaultModel }: Props) {
                 <span className={`plugin-status ${plugin.status}`}>
                   {plugin.status === "ready" ? "Ready" : "Draft"}
                 </span>
-                <button
-                  className="plugin-card-delete"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteId(deleteId === plugin.id ? null : plugin.id);
-                  }}
-                >
-                  {deleteId === plugin.id ? (
-                    <span className="plugin-card-delete-confirm" onClick={(e) => { e.stopPropagation(); handleDelete(plugin.id); }}>
-                      Confirm
-                    </span>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-2 14H7L5 6" />
-                      <path d="M10 11v6" />
-                      <path d="M14 11v6" />
+                <div className="plugin-card-menu-wrapper" ref={menuId === plugin.id ? menuRef : null}>
+                  <button
+                    className="plugin-card-menu-btn"
+                    onClick={(e) => { e.stopPropagation(); setMenuId(menuId === plugin.id ? null : plugin.id); }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="5" r="1" />
+                      <circle cx="12" cy="12" r="1" />
+                      <circle cx="12" cy="19" r="1" />
                     </svg>
+                  </button>
+                  {menuId === plugin.id && (
+                    <div className="plugin-card-dropdown">
+                      <button onClick={(e) => { e.stopPropagation(); openRename(plugin); }}>Rename</button>
+                      <button className="plugin-card-dropdown-danger" onClick={(e) => { e.stopPropagation(); openDeleteConfirm(plugin.id); }}>Delete</button>
+                    </div>
                   )}
-                </button>
-              </div>
-              {renameId === plugin.id ? (
-                <form className="plugin-rename-form" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); handleRename(plugin.id); }} onClick={(e) => e.stopPropagation()}>
-                  <input
-                    className="plugin-rename-input"
-                    value={renameName}
-                    onChange={(e) => setRenameName(e.target.value)}
-                    onBlur={() => { setRenameId(null); setRenameName(""); }}
-                    onKeyDown={(e) => { if (e.key === "Escape") { setRenameId(null); setRenameName(""); } }}
-                    autoFocus
-                  />
-                </form>
-              ) : (
-                <div className="plugin-card-name" onDoubleClick={(e) => { e.stopPropagation(); setRenameId(plugin.id); setRenameName(plugin.name); }}>
-                  {plugin.name}
                 </div>
-              )}
+              </div>
+              <div className="plugin-card-name">{plugin.name}</div>
               <div className="plugin-card-meta">
                 {plugin.templateUsed ? plugin.templateUsed.replace("m4l_", "").replace(/_/g, " ") : "From scratch"}
                 {plugin.updatedAt?.toDate && (
@@ -160,6 +168,49 @@ export function PluginList({ onOpen, defaultModel }: Props) {
               </button>
               <button className="modal-confirm" onClick={handleCreate} disabled={creating}>
                 {creating ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Modal */}
+      {renameId && (
+        <div className="modal-overlay" onClick={() => { setRenameId(null); setRenameName(""); }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Rename Plugin</h3>
+            <input
+              type="text"
+              className="modal-input"
+              value={renameName}
+              onChange={(e) => setRenameName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleRename(renameId); if (e.key === "Escape") { setRenameId(null); setRenameName(""); } }}
+              autoFocus
+            />
+            <div className="modal-actions">
+              <button className="modal-cancel" onClick={() => { setRenameId(null); setRenameName(""); }}>
+                Cancel
+              </button>
+              <button className="modal-confirm" onClick={() => handleRename(renameId)}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirmId(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Delete Plugin</h3>
+            <p className="modal-subtitle">This will permanently delete this plugin and all its messages. This cannot be undone.</p>
+            <div className="modal-actions">
+              <button className="modal-cancel" onClick={() => setDeleteConfirmId(null)}>
+                Cancel
+              </button>
+              <button className="modal-confirm" style={{ background: "var(--error)" }} onClick={() => handleDelete(deleteConfirmId)}>
+                Delete
               </button>
             </div>
           </div>

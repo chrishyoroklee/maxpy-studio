@@ -1878,7 +1878,11 @@ textarea:focus-visible {
   color: var(--text-secondary);
 }
 
-.plugin-card-delete {
+.plugin-card-menu-wrapper {
+  position: relative;
+}
+
+.plugin-card-menu-btn {
   background: none;
   border: none;
   color: var(--text-muted);
@@ -1888,14 +1892,47 @@ textarea:focus-visible {
   transition: color 0.15s;
 }
 
-.plugin-card-delete:hover {
-  color: var(--error);
+.plugin-card-menu-btn:hover {
+  color: var(--text-primary);
 }
 
-.plugin-card-delete-confirm {
-  font-size: 11px;
-  color: var(--error);
-  font-weight: 600;
+.plugin-card-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  min-width: 120px;
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+}
+
+.plugin-card-dropdown button {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.plugin-card-dropdown button:hover {
+  background: var(--bg-surface);
+}
+
+.plugin-card-dropdown-danger {
+  color: var(--error) !important;
+}
+
+.plugin-card-dropdown-danger:hover {
+  background: var(--error-bg) !important;
 }
 
 /* Header back button */
