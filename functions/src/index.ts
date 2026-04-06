@@ -87,6 +87,7 @@ export const generateCode = onRequest(
     timeoutSeconds: 300,
     memory: "256MiB",
     cors: true,
+    invoker: "public",
     maxInstances: 100,
   },
   async (req, res) => {
