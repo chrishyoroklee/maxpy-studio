@@ -458,6 +458,19 @@ textarea:focus-visible {
   word-wrap: break-word;
 }
 
+/* ==================== Plugin Description ==================== */
+
+.plugin-description {
+  margin: 8px 0 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent, #646cff);
+}
+
 /* ==================== Error ==================== */
 
 .message-error {
@@ -1659,15 +1672,19 @@ textarea:focus-visible {
   background: var(--bg-surface);
 }
 
-.code-patch-tabs .code-block {
+.code-patch-tabs .code-block-cm {
   margin: 0;
-  padding: 16px;
-  background: var(--bg-base);
-  overflow-x: auto;
-  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  overflow: auto;
+}
+
+.code-patch-tabs .code-block-cm .cm-editor {
   font-size: 12px;
   line-height: 1.6;
-  color: var(--text-primary);
+  max-height: 60vh;
+}
+
+.code-patch-tabs .code-block-cm .cm-editor .cm-scroller {
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
 }
 
 /* ==================== Validation Panel ==================== */

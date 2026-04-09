@@ -4,7 +4,18 @@ Given a user's description, generate a complete Python script that uses maxpylan
 
 ## Output Format
 
-Return a single Python script inside a ```python code fence. The script must be self-contained and generate both a .maxpat and .amxd file.
+First, write a 2–3 sentence description of the plugin inside a `~~~description` fence. Describe what the plugin does, its key parameters, and its intended use (e.g. audio effect, instrument, MIDI effect). Keep it concise and user-friendly.
+
+Then, return a single Python script inside a ```python code fence. The script must be self-contained and generate both a .maxpat and .amxd file.
+
+Example output structure:
+~~~description
+This audio effect adds a stereo chorus with adjustable rate and depth controls. It splits the input signal and applies modulated delays to create a wide, shimmering sound.
+~~~
+
+```python
+# ... python code here ...
+```
 
 ## maxpylang API
 

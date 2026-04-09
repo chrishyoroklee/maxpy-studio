@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { streamLLM, RateLimitError } from "../api/client";
-import { extractCode, ExtractionError } from "../lib/extractor";
+import { extractCode, extractDescription, ExtractionError } from "../lib/extractor";
 import { rewriteSavePaths } from "../lib/pathRewriter";
 import { fetchTemplateCode } from "../lib/templates";
 import {
@@ -51,6 +51,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   code?: string;
+  description?: string;
   amxdBytes?: Uint8Array;
   patchData?: PatchGraph;
   warnings?: ValidationIssue[];
@@ -98,6 +99,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           role: d.role,
           content: d.content,
           code: d.code,
+          description: d.description,
           error: d.error,
           warnings: d.warnings as ValidationIssue[] | undefined,
         }));
@@ -182,9 +184,9 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           templateCode = await fetchTemplateCode(template);
         }
 
-        const MAX_RETRIES = 2;
-        let lastError = "";
+        const MAX_RETRIES = 4;
         let lastCode = "";
+        const errorHistory: Array<{ error: string; code: string }> = [];
 
         for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
           // On retry, reset the assistant message and build error-fix prompt
@@ -192,7 +194,13 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           let currentHistory = history;
           if (attempt > 0) {
             console.log(`[useChat] Retry attempt ${attempt}/${MAX_RETRIES}`);
-            currentPrompt = `Your previous code produced this error:\n\`\`\`\n${lastError}\n\`\`\`\n\nHere was the code:\n\`\`\`python\n${lastCode}\n\`\`\`\n\nFix the issue and output the complete corrected Python code. Make sure all objects exist in Max/MSP and all inlet/outlet indices are valid.`;
+
+            // Build a summary of ALL prior failed attempts so the LLM doesn't repeat mistakes
+            const priorAttempts = errorHistory
+              .map((h, i) => `--- Attempt ${i + 1} ---\nError:\n\`\`\`\n${h.error}\n\`\`\`\nCode:\n\`\`\`python\n${h.code}\n\`\`\``)
+              .join("\n\n");
+
+            currentPrompt = `You have failed ${attempt} time${attempt > 1 ? "s" : ""}. Here are ALL prior attempts and their errors:\n\n${priorAttempts}\n\nDo NOT repeat the same mistakes. Each error above must be addressed. Identify what went wrong in each attempt and make a DIFFERENT, correct fix. Output the complete corrected Python code. Make sure all objects exist in Max/MSP and all inlet/outlet indices are valid.`;
             // Include the failed exchange in history so LLM has full context
             currentHistory = [
               ...history,
@@ -202,7 +210,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
-                  ? { ...m, content: attempt === 1 ? "Refining..." : "Retrying...", error: undefined, code: undefined }
+                  ? { ...m, content: `Retrying (${attempt}/${MAX_RETRIES})...`, error: undefined, code: undefined }
                   : m
               )
             );
@@ -239,8 +247,8 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             code = extractCode(fullResponse);
           } catch (err) {
             const msg = err instanceof ExtractionError ? err.message : "Code extraction failed";
-            lastError = msg;
             lastCode = "";
+            errorHistory.push({ error: msg, code: "" });
             if (attempt < MAX_RETRIES) continue; // Retry
             setMessages((prev) =>
               prev.map((m) =>
@@ -253,11 +261,14 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             return;
           }
 
+          // Extract description (non-critical)
+          const description = extractDescription(fullResponse);
+
           // Phase 3: Rewrite paths and execute in Pyodide
           const rewritten = rewriteSavePaths(code);
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, code: rewritten } : m
+              m.id === assistantId ? { ...m, code: rewritten, description } : m
             )
           );
 
@@ -279,7 +290,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
 
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes!, patchData, warnings, content: fullResponse } : m
+                m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes!, patchData, warnings, description, content: fullResponse } : m
               )
             );
 
@@ -311,6 +322,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
                 role: "assistant",
                 content: fullResponse,
                 code: rewritten,
+                description,
                 warnings: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
                 amxdStoragePath,
               }).catch((e) => console.warn("Failed to save assistant message:", e));
@@ -319,8 +331,8 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           }
 
           // FAIL — capture error for retry
-          lastError = result.stderr;
           lastCode = rewritten;
+          errorHistory.push({ error: result.stderr, code: rewritten });
 
           if (attempt === MAX_RETRIES) {
             // Final failure — show error

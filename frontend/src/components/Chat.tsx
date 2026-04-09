@@ -145,6 +145,9 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                   {msg.code && (
                     <CodePatchTabs code={msg.code} patchData={msg.patchData} warnings={msg.warnings} />
                   )}
+                  {msg.description && (
+                    <p className="plugin-description">{msg.description}</p>
+                  )}
                   {msg.error && (
                     <div className={`message-error${msg.isRateLimited ? " message-rate-limited" : ""}`}>
                       {msg.isRateLimited ? "Slow down \u2014 " : ""}{msg.error}
