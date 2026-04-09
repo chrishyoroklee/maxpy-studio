@@ -97,7 +97,8 @@ function App() {
   }
 
   // Email not verified — show verification screen (Google users are auto-verified)
-  if (user && !user.emailVerified && user.providerData[0]?.providerId === "password" && !embedded) {
+  // Skip verification gate in local dev (emulator doesn't send real emails)
+  if (!import.meta.env.DEV && user && !user.emailVerified && user.providerData[0]?.providerId === "password" && !embedded) {
     return (
       <div className="app" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
         <div className="verify-email-card">

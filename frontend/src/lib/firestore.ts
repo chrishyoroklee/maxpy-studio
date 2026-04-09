@@ -149,6 +149,7 @@ export interface MessageDoc {
   role: "user" | "assistant";
   content: string;
   code?: string;
+  description?: string;
   error?: string;
   warnings?: Array<{ severity: string; code: string; message: string }>;
   amxdStoragePath?: string;

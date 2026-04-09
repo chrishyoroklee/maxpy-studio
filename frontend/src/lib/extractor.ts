@@ -18,6 +18,11 @@ export class ExtractionError extends Error {
   }
 }
 
+export function extractDescription(llmResponse: string): string | undefined {
+  const match = /~~~description\s*\n([\s\S]*?)~~~/.exec(llmResponse);
+  return match ? match[1].trim() : undefined;
+}
+
 export function extractCode(llmResponse: string): string {
   const pattern = /```python\s*\n([\s\S]*?)```/g;
   const matches: string[] = [];

@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { PatchGraph } from "./PatchGraph";
 import type { PatchGraph as PatchGraphData } from "../lib/patchGraphParser";
 import type { ValidationIssue } from "../lib/patchValidator";
+import { EditorView } from "@codemirror/view";
+import { EditorState } from "@codemirror/state";
+import { python } from "@codemirror/lang-python";
+import { oneDark } from "@codemirror/theme-one-dark";
 
 interface Props {
   code: string;
@@ -29,6 +33,41 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
       document.body.style.overflow = "";
     };
   }, [fullscreen]);
+
+  // CodeMirror editor
+  const cmContainerRef = useRef<HTMLDivElement>(null);
+  const cmViewRef = useRef<EditorView | null>(null);
+
+  useEffect(() => {
+    if (activeTab !== "code" || !cmContainerRef.current) return;
+
+    // Destroy previous instance
+    if (cmViewRef.current) {
+      cmViewRef.current.destroy();
+      cmViewRef.current = null;
+    }
+
+    const state = EditorState.create({
+      doc: code,
+      extensions: [
+        python(),
+        oneDark,
+        EditorView.editable.of(false),
+        EditorState.readOnly.of(true),
+        EditorView.lineWrapping,
+      ],
+    });
+
+    cmViewRef.current = new EditorView({
+      state,
+      parent: cmContainerRef.current,
+    });
+
+    return () => {
+      cmViewRef.current?.destroy();
+      cmViewRef.current = null;
+    };
+  }, [activeTab, code]);
 
   const hasPatch = patchData && patchData.nodes.length > 0;
 
@@ -140,9 +179,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
             )
           )}
           {activeTab === "code" && (
-            <pre className="code-block">
-              <code>{code}</code>
-            </pre>
+            <div className="code-block-cm" ref={cmContainerRef} />
           )}
         </div>
       </div>
