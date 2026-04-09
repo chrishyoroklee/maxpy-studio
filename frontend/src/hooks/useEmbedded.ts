@@ -13,5 +13,6 @@ export function useEmbedMode(): EmbedMode {
 }
 
 export function isM4L(): boolean {
-  return useEmbedMode() === "m4l";
+  const params = new URLSearchParams(window.location.search);
+  return params.get("embedded") === "m4l";
 }
