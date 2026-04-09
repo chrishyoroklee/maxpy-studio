@@ -2,7 +2,6 @@ import { AuthScreen } from "./components/AuthScreen";
 import { Chat } from "./components/Chat";
 import { Dashboard } from "./components/Dashboard";
 import { PluginList } from "./components/PluginList";
-import { loadPlugins } from "./lib/firestore";
 import { useAuth } from "./hooks/useAuth";
 import { useChat } from "./hooks/useChat";
 import { useEmbedded } from "./hooks/useEmbedded";
@@ -20,15 +19,6 @@ function App() {
   const [view, setView] = useState<View>("plugins");
   const [activePluginId, setActivePluginId] = useState<string | null>(null);
   const [activePluginName, setActivePluginName] = useState<string>("");
-
-  // Load active plugin name
-  useEffect(() => {
-    if (!activePluginId) { setActivePluginName(""); return; }
-    loadPlugins().then((plugins) => {
-      const p = plugins.find((x) => x.id === activePluginId);
-      if (p) setActivePluginName(p.name);
-    }).catch(() => {});
-  }, [activePluginId]);
 
   const { messages, isLoading, sendMessage, buildTemplate, clearMessages } = useChat(runCode, activePluginId);
 
@@ -62,13 +52,15 @@ function App() {
     buildTemplate(templateName, templateLabel, model);
   };
 
-  const openPlugin = (pluginId: string) => {
+  const openPlugin = (pluginId: string, pluginName?: string) => {
     setActivePluginId(pluginId);
+    setActivePluginName(pluginName || "");
     setView("workspace");
   };
 
   const backToPlugins = () => {
     setActivePluginId(null);
+    setActivePluginName("");
     clearMessages();
     setView("plugins");
   };

@@ -1,10 +1,10 @@
 import { useState } from "react";
 
 interface Props {
-  signIn: (email: string, password: string) => Promise<any>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<any>;
-  signInWithGoogle: () => Promise<any>;
-  resetPassword: (email: string) => Promise<any>;
+  signIn: (email: string, password: string) => Promise<unknown>;
+  signUp: (email: string, password: string, displayName?: string) => Promise<unknown>;
+  signInWithGoogle: () => Promise<unknown>;
+  resetPassword: (email: string) => Promise<unknown>;
 }
 
 const AUTH_ERRORS: Record<string, string> = {
@@ -18,9 +18,10 @@ const AUTH_ERRORS: Record<string, string> = {
   "auth/popup-closed-by-user": "Google sign-in was cancelled.",
 };
 
-function getErrorMessage(error: any): string {
-  const code = error?.code || "";
-  return AUTH_ERRORS[code] || error?.message || "An error occurred.";
+function getErrorMessage(error: unknown): string {
+  const err = error as { code?: string; message?: string } | undefined;
+  const code = err?.code || "";
+  return AUTH_ERRORS[code] || err?.message || "An error occurred.";
 }
 
 export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: Props) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { loadPlugins, createPlugin, deletePlugin, updatePlugin, type PluginDoc } from "../lib/firestore";
 
 interface Props {
-  onOpen: (pluginId: string) => void;
+  onOpen: (pluginId: string, pluginName?: string) => void;
   defaultModel: string;
 }
 
@@ -45,7 +45,7 @@ export function PluginList({ onOpen, defaultModel }: Props) {
       if (id) {
         setShowCreateModal(false);
         setNewName("");
-        onOpen(id);
+        onOpen(id, newName);
       }
     } finally {
       setCreating(false);
@@ -111,7 +111,7 @@ export function PluginList({ onOpen, defaultModel }: Props) {
       ) : (
         <div className="plugin-grid">
           {plugins.map((plugin) => (
-            <div key={plugin.id} className="plugin-card" onClick={() => onOpen(plugin.id)}>
+            <div key={plugin.id} className="plugin-card" onClick={() => onOpen(plugin.id, plugin.name)}>
               <div className="plugin-card-header">
                 <span className={`plugin-status ${plugin.status}`}>
                   {plugin.status === "ready" ? "Ready" : "Draft"}

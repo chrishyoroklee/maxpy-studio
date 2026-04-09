@@ -67,8 +67,8 @@ export interface PluginDoc {
   status: "draft" | "ready";
   amxdStoragePath: string | null;
   model: string;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: { toDate: () => Date } | null;
+  updatedAt: { toDate: () => Date } | null;
 }
 
 export async function createPlugin(name: string, model: string, templateUsed?: string): Promise<string> {
@@ -153,7 +153,7 @@ export interface MessageDoc {
   error?: string;
   warnings?: Array<{ severity: string; code: string; message: string }>;
   amxdStoragePath?: string;
-  createdAt: any;
+  createdAt: unknown;
 }
 
 export async function saveMessage(
