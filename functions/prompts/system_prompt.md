@@ -202,14 +202,58 @@ patch.connect(
 )
 ```
 
-### 6. Critical rules for instruments
+### 6. Polyphony — `poly N 1` + `route` + N parallel voice chains
 
-1. **ALWAYS use `notein` → `poly 1 1` → pitch/velocity routing.** Never wire `notein` outlets directly into a signal chain.
+**IMPORTANT:** `notein`/`midiin` alone do NOT give polyphony. Polyphony is a property of the *synthesis engine*, not the MIDI input method. To play chords, you MUST build multiple parallel voice chains and allocate notes to them with `poly N 1`.
+
+For mono instruments (basses, lead synths), use `poly 1 1`. For polyphonic instruments (pianos, pads, chord synths), use `poly N 1` where N is the voice count (typically 4 or 8).
+
+**Pattern for N-voice polyphony:**
+
+```python
+# poly N 1 — N voices, steal-mode 1 (replace oldest held note when full)
+# Outlets: 0=voice#, 1=pitch, 2=velocity, 3=list [voice pitch velocity]
+poly_alloc = patch.place("poly 4 1")[0]
+patch.connect(
+    [notein_obj.outs[0], poly_alloc.ins[0]],  # pitch → poly
+    [notein_obj.outs[1], poly_alloc.ins[1]],  # velocity → poly
+)
+
+# Use the LIST outlet (3) + `route` to split by voice#.
+# route N strips the matched first element, so each outlet receives
+# [pitch velocity] for that voice.
+router = patch.place("route 1 2 3 4")[0]
+patch.connect([poly_alloc.outs[3], router.ins[0]])
+
+# For each voice, unpack pitch and velocity and build a full signal chain
+# (oscillator + envelope + VCA). All voices share the same live.dial
+# controls (connect each dial to every voice's envelope inlet).
+for i in range(4):
+    unpacker = patch.place("unpack 0 0")[0]
+    patch.connect([router.outs[i], unpacker.ins[0]])
+    # unpacker.outs[0] = pitch, unpacker.outs[1] = velocity
+    # ... build voice: mtof → sig~ → cycle~ → *~ adsr~ → ... ...
+
+# Finally, sum all voice outputs with +~ objects and send to clip~ → plugout~
+```
+
+**When to use how many voices:**
+- **1 voice** — monophonic leads, basses (use `poly 1 1`)
+- **4 voices** — simple polyphonic instruments (use `poly 4 1`) — good default
+- **8 voices** — rich pads, pianos with lots of overlap (`poly 8 1`) — more CPU
+- **Don't go above 8** without a good reason — each voice duplicates the full DSP chain
+
+**Reference**: `m4l_rhodes_piano.py` is a complete working example of 4-voice polyphony with this exact pattern.
+
+### 7. Critical rules for instruments
+
+1. **ALWAYS use `notein` → `poly N 1` → pitch/velocity routing.** Never wire `notein` outlets directly into a signal chain.
 2. **ALWAYS scale velocity to 0–1 via `expr $i1 / 127.` before feeding `adsr~`.** Unscaled velocity causes extreme clipping.
 3. **ALWAYS use `adsr~` for envelopes, never `line~` + `select` + `message`.** The old pattern loses velocity sensitivity and never produces proper ADSR.
 4. **ALWAYS use `clip~ -1. 1.` before `plugout~`.** Safety rule (reiterating).
 5. **For velocity-sensitive brightness or modulation**: multiply the velocity signal into the relevant parameter. Example: `bell_signal = bell_osc * bell_env * velocity_signal * brightness_dial`.
 6. **For polyphonic-feeling instruments** (pianos, pads), combine the amp envelope's long decay+release with a moderate sustain level so notes ring naturally. Use sustain ≥ 0.2 for pianos/rhodes, sustain 0.5–0.8 for synths.
+7. **Polyphony requires multiple voice chains** — use `poly N 1` + `route` + parallel voice chains. A single `cycle~` + single `adsr~` is inherently mono no matter what MIDI input pattern you use.
 
 The `m4l_mono_synth.py`, `m4l_bass_synth.py`, and `m4l_rhodes_piano.py` examples bundled below are complete, tested exemplars of these patterns — reference them when generating any instrument.
 
