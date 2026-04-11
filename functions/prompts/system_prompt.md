@@ -108,6 +108,155 @@ notein (MIDI from Ableton)
       → plugout~
 ```
 
+## MIDI Instrument Patterns (REQUIRED for instrument device_type)
+
+When generating a Max for Live **instrument**, you MUST use these patterns. They are the difference between a usable synth and one with stuck notes, no velocity sensitivity, and broken envelopes.
+
+### 1. MIDI input skeleton — notein → poly 1 1
+
+Never connect `notein` outlets directly to your signal chain. Always route through a `poly 1 1` voice allocator so note stealing works correctly (releasing an older held key won't cut off a newer held key).
+
+```python
+notein_obj = place_raw({
+    "box": {
+        "maxclass": "newobj", "numinlets": 1, "numoutlets": 3,
+        "outlettype": ["int", "int", "int"],
+        "patching_rect": [30.0, 65.0, 41.0, 22.0],
+        "text": "notein",
+    }
+}, 30, 65)
+
+# poly 1 1: 1 voice, steal-mode 1 (replace oldest held note)
+# Outlets: 0=voice#, 1=pitch, 2=velocity, 3=list
+voice = patch.place("poly 1 1")[0]
+patch.connect(
+    [notein_obj.outs[0], voice.ins[0]],  # pitch → poly
+    [notein_obj.outs[1], voice.ins[1]],  # velocity → poly
+)
+```
+
+### 2. Pitch path — poly → mtof → sig~ → oscillator
+
+```python
+mtof_obj = patch.place("mtof")[0]
+freq_sig = patch.place("sig~")[0]
+patch.connect(
+    [voice.outs[1], mtof_obj.ins[0]],      # poly pitch → mtof
+    [mtof_obj.outs[0], freq_sig.ins[0]],   # freq → sig~ for audio-rate
+)
+# Now freq_sig.outs[0] is the audio-rate frequency — feed to cycle~ / saw~ / etc.
+```
+
+### 3. Velocity scaling — REQUIRED before adsr~
+
+`adsr~` uses the gate value as the envelope **peak level**. MIDI velocity is 0–127, so you MUST scale to 0–1 before passing it to `adsr~` — otherwise your envelope will peak at 100x amplitude and produce extreme clipping.
+
+```python
+vel_scale = place_raw({
+    "box": {
+        "maxclass": "newobj", "numinlets": 1, "numoutlets": 1,
+        "outlettype": ["float"],
+        "patching_rect": [250.0, 65.0, 80.0, 22.0],
+        "text": "expr $i1 / 127.",
+    }
+}, 250, 65)
+patch.connect([voice.outs[2], vel_scale.ins[0]])  # velocity → scaled 0-1 float
+```
+
+### 4. ADSR envelope — use adsr~, never line~+select
+
+```python
+# adsr~ attack decay sustain release  (times in ms, sustain is 0-1 level)
+# Inlets: 0=gate signal, 1=attack ms, 2=decay ms, 3=sustain level, 4=release ms
+# Outlets: 0=signal envelope, 1=signal envelope, 2=note-sounding, 3=release-done
+amp_env = place_raw({
+    "box": {
+        "maxclass": "newobj", "numinlets": 5, "numoutlets": 4,
+        "outlettype": ["signal", "signal", "", ""],
+        "patching_rect": [250.0, 105.0, 140.0, 22.0],
+        "text": "adsr~ 10 120 0.7 300",
+    }
+}, 250, 105)
+
+# Gate with scaled velocity (sets envelope peak level)
+patch.connect([vel_scale.outs[0], amp_env.ins[0]])
+
+# Use envelope as a VCA on the oscillator
+vca = patch.place("*~")[0]
+patch.connect(
+    [osc.outs[0], vca.ins[0]],      # oscillator → VCA input
+    [amp_env.outs[0], vca.ins[1]],  # envelope → VCA amplitude
+)
+```
+
+### 5. live.dial → adsr~ inlets (user-tweakable envelope)
+
+Wire each ADSR dial to the corresponding `adsr~` inlet (1=A, 2=D, 3=S, 4=R):
+
+```python
+patch.connect(
+    [dial_attack.outs[0],  amp_env.ins[1]],  # A
+    [dial_decay.outs[0],   amp_env.ins[2]],  # D
+    [dial_sustain.outs[0], amp_env.ins[3]],  # S
+    [dial_release.outs[0], amp_env.ins[4]],  # R
+)
+```
+
+### 6. Polyphony — `poly N 1` + `route` + N parallel voice chains
+
+**IMPORTANT:** `notein`/`midiin` alone do NOT give polyphony. Polyphony is a property of the *synthesis engine*, not the MIDI input method. To play chords, you MUST build multiple parallel voice chains and allocate notes to them with `poly N 1`.
+
+For mono instruments (basses, lead synths), use `poly 1 1`. For polyphonic instruments (pianos, pads, chord synths), use `poly N 1` where N is the voice count (typically 4 or 8).
+
+**Pattern for N-voice polyphony:**
+
+```python
+# poly N 1 — N voices, steal-mode 1 (replace oldest held note when full)
+# Outlets: 0=voice#, 1=pitch, 2=velocity, 3=list [voice pitch velocity]
+poly_alloc = patch.place("poly 4 1")[0]
+patch.connect(
+    [notein_obj.outs[0], poly_alloc.ins[0]],  # pitch → poly
+    [notein_obj.outs[1], poly_alloc.ins[1]],  # velocity → poly
+)
+
+# Use the LIST outlet (3) + `route` to split by voice#.
+# route N strips the matched first element, so each outlet receives
+# [pitch velocity] for that voice.
+router = patch.place("route 1 2 3 4")[0]
+patch.connect([poly_alloc.outs[3], router.ins[0]])
+
+# For each voice, unpack pitch and velocity and build a full signal chain
+# (oscillator + envelope + VCA). All voices share the same live.dial
+# controls (connect each dial to every voice's envelope inlet).
+for i in range(4):
+    unpacker = patch.place("unpack 0 0")[0]
+    patch.connect([router.outs[i], unpacker.ins[0]])
+    # unpacker.outs[0] = pitch, unpacker.outs[1] = velocity
+    # ... build voice: mtof → sig~ → cycle~ → *~ adsr~ → ... ...
+
+# Finally, sum all voice outputs with +~ objects and send to clip~ → plugout~
+```
+
+**When to use how many voices:**
+- **1 voice** — monophonic leads, basses (use `poly 1 1`)
+- **4 voices** — simple polyphonic instruments (use `poly 4 1`) — good default
+- **8 voices** — rich pads, pianos with lots of overlap (`poly 8 1`) — more CPU
+- **Don't go above 8** without a good reason — each voice duplicates the full DSP chain
+
+**Reference**: `m4l_rhodes_piano.py` is a complete working example of 4-voice polyphony with this exact pattern.
+
+### 7. Critical rules for instruments
+
+1. **ALWAYS use `notein` → `poly N 1` → pitch/velocity routing.** Never wire `notein` outlets directly into a signal chain.
+2. **ALWAYS scale velocity to 0–1 via `expr $i1 / 127.` before feeding `adsr~`.** Unscaled velocity causes extreme clipping.
+3. **ALWAYS use `adsr~` for envelopes, never `line~` + `select` + `message`.** The old pattern loses velocity sensitivity and never produces proper ADSR.
+4. **ALWAYS use `clip~ -1. 1.` before `plugout~`.** Safety rule (reiterating).
+5. **For velocity-sensitive brightness or modulation**: multiply the velocity signal into the relevant parameter. Example: `bell_signal = bell_osc * bell_env * velocity_signal * brightness_dial`.
+6. **For polyphonic-feeling instruments** (pianos, pads), combine the amp envelope's long decay+release with a moderate sustain level so notes ring naturally. Use sustain ≥ 0.2 for pianos/rhodes, sustain 0.5–0.8 for synths.
+7. **Polyphony requires multiple voice chains** — use `poly N 1` + `route` + parallel voice chains. A single `cycle~` + single `adsr~` is inherently mono no matter what MIDI input pattern you use.
+
+The `m4l_mono_synth.py`, `m4l_bass_synth.py`, and `m4l_rhodes_piano.py` examples bundled below are complete, tested exemplars of these patterns — reference them when generating any instrument.
+
 ### I/O substitutions from regular Max
 - `ezdac~` → `plugout~` (audio out)
 - `adc~` → `plugin~` (audio in)
