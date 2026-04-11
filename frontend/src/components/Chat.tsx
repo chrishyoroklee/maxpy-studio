@@ -1,9 +1,34 @@
 import { useState, useRef, useEffect } from "react";
-import type { ChatMessage } from "../hooks/useChat";
+import type { ChatMessage, MessageStatus } from "../hooks/useChat";
 import { downloadBlob } from "../lib/download";
 import { CodePatchTabs } from "./CodePatchTabs";
 import { logEvent } from "../lib/firestore";
 import { useEmbedMode } from "../hooks/useEmbedded";
+
+type InFlightStatus = Exclude<MessageStatus, "done" | "error">;
+
+const STATUS_LABELS: Record<InFlightStatus, string> = {
+  creating: "Creating plugin",
+  running: "Running code",
+  debugging: "Debugging",
+};
+
+function StatusIndicator({ status, detail }: { status: InFlightStatus; detail?: string }) {
+  const label = STATUS_LABELS[status] || "Working";
+  return (
+    <div className="status-indicator" role="status" aria-live="polite">
+      <span className="status-dot" aria-hidden="true" />
+      <span className="status-label">
+        {label}{detail ? ` (${detail})` : ""}...
+      </span>
+    </div>
+  );
+}
+
+// Legacy content is "clean" if it doesn't contain code/description fences
+function isCleanLegacyContent(content: string): boolean {
+  return !content.includes("```") && !content.includes("~~~");
+}
 
 interface Props {
   messages: ChatMessage[];
@@ -135,43 +160,59 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
           </>
         ) : (
           <>
-            {messages.map((msg) => (
-              <div key={msg.id} className={`message ${msg.role}`}>
-                <div className="message-role">
-                  {msg.role === "user" ? "You" : "Studio"}
+            {messages.map((msg) => {
+              const inFlightStatus: InFlightStatus | undefined =
+                msg.role === "assistant" && msg.status && msg.status !== "done" && msg.status !== "error"
+                  ? msg.status
+                  : undefined;
+              const isAssistantSettled = msg.role === "assistant" && (msg.status === "done" || msg.status === "error");
+              // Fall back to msg.content for legacy messages that predate iterationSummary
+              const summaryText = msg.iterationSummary
+                ?? (isAssistantSettled && msg.content && isCleanLegacyContent(msg.content) ? msg.content : undefined);
+              return (
+                <div key={msg.id} className={`message ${msg.role}`}>
+                  <div className="message-role">
+                    {msg.role === "user" ? "You" : "Studio"}
+                  </div>
+                  <div className="message-content">
+                    {msg.role === "user" && msg.content}
+                    {inFlightStatus && (
+                      <StatusIndicator status={inFlightStatus} detail={msg.statusDetail} />
+                    )}
+                    {isAssistantSettled && summaryText && (
+                      <p className="iteration-summary">{summaryText}</p>
+                    )}
+                    {isAssistantSettled && msg.code && (
+                      <CodePatchTabs code={msg.code} patchData={msg.patchData} warnings={msg.warnings} />
+                    )}
+                    {isAssistantSettled && msg.description && (
+                      <p className="plugin-description">{msg.description}</p>
+                    )}
+                    {msg.error && (
+                      <div className={`message-error${msg.isRateLimited ? " message-rate-limited" : ""}`}>
+                        {msg.isRateLimited ? "Slow down \u2014 " : ""}{msg.error}
+                      </div>
+                    )}
+                    {msg.amxdBytes && !isM4L && (
+                      <button
+                        className="download-button"
+                        onClick={() => { logEvent("download", { source: "chat" }); downloadBlob(msg.amxdBytes!, filename); }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Download .amxd
+                      </button>
+                    )}
+                    {msg.amxdBytes && isM4L && (
+                      <div className="m4l-loaded-badge">✓ Loaded into device</div>
+                    )}
+                  </div>
                 </div>
-                <div className="message-content">
-                  {msg.content}
-                  {msg.code && (
-                    <CodePatchTabs code={msg.code} patchData={msg.patchData} warnings={msg.warnings} />
-                  )}
-                  {msg.description && (
-                    <p className="plugin-description">{msg.description}</p>
-                  )}
-                  {msg.error && (
-                    <div className={`message-error${msg.isRateLimited ? " message-rate-limited" : ""}`}>
-                      {msg.isRateLimited ? "Slow down \u2014 " : ""}{msg.error}
-                    </div>
-                  )}
-                  {msg.amxdBytes && !isM4L && (
-                    <button
-                      className="download-button"
-                      onClick={() => { logEvent("download", { source: "chat" }); downloadBlob(msg.amxdBytes!, filename); }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                      Download .amxd
-                    </button>
-                  )}
-                  {msg.amxdBytes && isM4L && (
-                    <div className="m4l-loaded-badge">✓ Loaded into device</div>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {isLoading && (
               <div className="loading-indicator">

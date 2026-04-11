@@ -150,6 +150,7 @@ export interface MessageDoc {
   content: string;
   code?: string;
   description?: string;
+  iterationSummary?: string;
   error?: string;
   warnings?: Array<{ severity: string; code: string; message: string }>;
   amxdStoragePath?: string;
