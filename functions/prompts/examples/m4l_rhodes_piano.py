@@ -6,9 +6,16 @@ bell partial at 14x freq) with 4-voice polyphony so you can play chords.
 
 Polyphony architecture:
   notein → poly 4 1 (4 voices, last-note-steal)
-    ↓ outlet 3 (list: [voice# pitch velocity])
-  route 1 2 3 4 (strips voice#, passes [pitch velocity] to one of 4 outs)
-    ↓
+    outlet 0 = voice#  (fires LAST due to Max right-to-left firing)
+    outlet 1 = pitch   (fires second)
+    outlet 2 = velocity (fires first)
+  ↓
+  pack 0 0 0 — voice# on inlet 0 (trigger), pitch on 1, velocity on 2
+    Output: [voice# pitch velocity] list (pack emits after all 3 stored)
+  ↓
+  route 1 2 3 4 — strips the matched voice# from the list, outputs
+    [pitch velocity] on the corresponding outlet (0..3) for that voice
+  ↓
   4 parallel voice chains, each:
     unpack pitch velocity
       ├─ pitch → mtof → sig~ → { cycle~ (fundamental), *~14 → cycle~ (bell) }
@@ -19,6 +26,12 @@ Polyphony architecture:
 
 All voices share the same live.dial controls (Brightness, Decay, Sustain,
 Release, Volume), so tweaking a dial updates every voice in sync.
+
+NOTE: poly's outlet 3 is "overflow", NOT a list of [voice pitch velocity].
+We must build the list explicitly with `pack`, and we must connect in
+reverse outlet order (velocity first, pitch second, voice# last) so
+voice# arrives LAST at pack's inlet 0 (the trigger inlet) after pitch and
+velocity have been stored.
 
 Usage:
   1. Drag the .amxd onto a MIDI track in Ableton
@@ -156,7 +169,8 @@ notein_obj = place_raw({
 }, 30, 65)
 
 # poly 4 1 — 4 voices, steal-mode 1 (steal oldest held note when full)
-# Outlet 3 is a list: [voice# pitch velocity]
+# Outlets: 0=voice#, 1=pitch, 2=velocity, 3=overflow (fires only on voice pool full)
+# Max fires outlets right-to-left: vel (2) first, pitch (1), voice# (0) last.
 patch.set_position(30, 105)
 poly_alloc = patch.place("poly 4 1")[0]
 
@@ -165,12 +179,26 @@ patch.connect(
     [notein_obj.outs[1], poly_alloc.ins[1]],  # velocity → poly
 )
 
-# Route the [voice pitch velocity] list to voice-specific outlets
-# route N strips the matched first element, so outlet 0 gets [pitch velocity]
-# for voice 1, outlet 1 for voice 2, etc.
+# Build a [voice# pitch velocity] list explicitly with pack.
+# pack outputs when its leftmost inlet (0) receives a value, after the
+# other inlets have been updated. Since poly fires outlets right-to-left
+# (vel → pitch → voice#), the order works out:
+#   1. vel arrives at pack.ins[2] (stored)
+#   2. pitch arrives at pack.ins[1] (stored)
+#   3. voice# arrives at pack.ins[0] (TRIGGERS output of [voice# pitch vel])
 patch.set_position(30, 145)
+packer = patch.place("pack 0 0 0")[0]
+patch.connect(
+    [poly_alloc.outs[2], packer.ins[2]],  # velocity → stored
+    [poly_alloc.outs[1], packer.ins[1]],  # pitch → stored
+    [poly_alloc.outs[0], packer.ins[0]],  # voice# → triggers output
+)
+
+# Route by voice# — route strips the matched first element, so each
+# outlet (0..3) receives [pitch velocity] for the corresponding voice.
+patch.set_position(30, 185)
 router = patch.place("route 1 2 3 4")[0]
-patch.connect([poly_alloc.outs[3], router.ins[0]])
+patch.connect([packer.outs[0], router.ins[0]])
 
 # ============================================================
 # VOICE CHAIN BUILDER (builds one full voice and returns its audio output)

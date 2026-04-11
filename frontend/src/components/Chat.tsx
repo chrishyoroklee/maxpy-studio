@@ -55,6 +55,8 @@ const SUGGESTIONS = [
   { label: "Mono Synth", desc: "Classic subtractive mono", prompt: "Add a filter envelope and a second oscillator (detuned saw)", template: "m4l_mono_synth" },
   { label: "Bass Synth", desc: "Moog-style sub bass", prompt: "Add a second saw oscillator detuned by 7 cents", template: "m4l_bass_synth" },
   { label: "Rhodes EP", desc: "Warm electric piano with bell tine", prompt: "Add a tremolo effect with rate and depth controls", template: "m4l_rhodes_piano" },
+  { label: "Organ", desc: "Hammond-style drawbar organ", prompt: "Add a Leslie-style rotary speaker effect", template: "m4l_organ" },
+  { label: "Upright Piano", desc: "Acoustic piano with rich harmonics", prompt: "Add a soft pedal that dampens the brightness", template: "m4l_upright_piano" },
 ];
 
 const MODELS = [
