@@ -5,25 +5,29 @@ import { CodePatchTabs } from "./CodePatchTabs";
 import { logEvent } from "../lib/firestore";
 import { useEmbedMode } from "../hooks/useEmbedded";
 
-const STATUS_LABELS: Record<MessageStatus, string> = {
+type InFlightStatus = Exclude<MessageStatus, "done" | "error">;
+
+const STATUS_LABELS: Record<InFlightStatus, string> = {
   creating: "Creating plugin",
   running: "Running code",
   debugging: "Debugging",
-  finalizing: "Finalizing",
-  done: "Done",
-  error: "Error",
 };
 
-function StatusIndicator({ status, detail }: { status: MessageStatus; detail?: string }) {
+function StatusIndicator({ status, detail }: { status: InFlightStatus; detail?: string }) {
   const label = STATUS_LABELS[status] || "Working";
   return (
-    <div className="status-indicator">
-      <span className="status-dot" />
+    <div className="status-indicator" role="status" aria-live="polite">
+      <span className="status-dot" aria-hidden="true" />
       <span className="status-label">
         {label}{detail ? ` (${detail})` : ""}...
       </span>
     </div>
   );
+}
+
+// Legacy content is "clean" if it doesn't contain code/description fences
+function isCleanLegacyContent(content: string): boolean {
+  return !content.includes("```") && !content.includes("~~~");
 }
 
 interface Props {
@@ -157,7 +161,14 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
         ) : (
           <>
             {messages.map((msg) => {
-              const isLoading = msg.role === "assistant" && msg.status && msg.status !== "done" && msg.status !== "error";
+              const inFlightStatus: InFlightStatus | undefined =
+                msg.role === "assistant" && msg.status && msg.status !== "done" && msg.status !== "error"
+                  ? msg.status
+                  : undefined;
+              const isAssistantSettled = msg.role === "assistant" && (msg.status === "done" || msg.status === "error");
+              // Fall back to msg.content for legacy messages that predate iterationSummary
+              const summaryText = msg.iterationSummary
+                ?? (isAssistantSettled && msg.content && isCleanLegacyContent(msg.content) ? msg.content : undefined);
               return (
                 <div key={msg.id} className={`message ${msg.role}`}>
                   <div className="message-role">
@@ -165,16 +176,16 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                   </div>
                   <div className="message-content">
                     {msg.role === "user" && msg.content}
-                    {isLoading && (
-                      <StatusIndicator status={msg.status!} detail={msg.statusDetail} />
+                    {inFlightStatus && (
+                      <StatusIndicator status={inFlightStatus} detail={msg.statusDetail} />
                     )}
-                    {msg.role === "assistant" && msg.status === "done" && msg.iterationSummary && (
-                      <p className="iteration-summary">{msg.iterationSummary}</p>
+                    {isAssistantSettled && summaryText && (
+                      <p className="iteration-summary">{summaryText}</p>
                     )}
-                    {msg.role === "assistant" && msg.status === "done" && msg.code && (
+                    {isAssistantSettled && msg.code && (
                       <CodePatchTabs code={msg.code} patchData={msg.patchData} warnings={msg.warnings} />
                     )}
-                    {msg.role === "assistant" && msg.status === "done" && msg.description && (
+                    {isAssistantSettled && msg.description && (
                       <p className="plugin-description">{msg.description}</p>
                     )}
                     {msg.error && (
@@ -187,7 +198,7 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                         className="download-button"
                         onClick={() => { logEvent("download", { source: "chat" }); downloadBlob(msg.amxdBytes!, filename); }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                           <polyline points="7 10 12 15 17 10" />
                           <line x1="12" y1="15" x2="12" y2="3" />

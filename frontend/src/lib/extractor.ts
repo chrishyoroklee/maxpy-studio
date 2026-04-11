@@ -18,13 +18,19 @@ export class ExtractionError extends Error {
   }
 }
 
+// Closing ~~~ must not be followed by a word char (so ~~~description
+// can't accidentally terminate a ~~~summary block and vice versa).
+const CLOSING_FENCE = /~~~(?!\w)/.source;
+
 export function extractDescription(llmResponse: string): string | undefined {
-  const match = /~~~description\s*\n([\s\S]*?)~~~/.exec(llmResponse);
+  const re = new RegExp(`~~~description\\s*\\n([\\s\\S]*?)${CLOSING_FENCE}`);
+  const match = re.exec(llmResponse);
   return match ? match[1].trim() : undefined;
 }
 
 export function extractSummary(llmResponse: string): string | undefined {
-  const match = /~~~summary\s*\n([\s\S]*?)~~~/.exec(llmResponse);
+  const re = new RegExp(`~~~summary\\s*\\n([\\s\\S]*?)${CLOSING_FENCE}`);
+  const match = re.exec(llmResponse);
   return match ? match[1].trim() : undefined;
 }
 

@@ -104,7 +104,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
     return (
       <div className="view-gate">
         <button className="view-gate-button" onClick={() => openTab("patch")}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <rect x="3" y="3" width="7" height="7" />
             <rect x="14" y="3" width="7" height="7" />
             <rect x="3" y="14" width="7" height="7" />
@@ -113,7 +113,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
           <span>View Patch Graph</span>
         </button>
         <button className="view-gate-button" onClick={() => openTab("code")}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="16 18 22 12 16 6" />
             <polyline points="8 6 2 12 8 18" />
           </svg>
@@ -167,6 +167,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
             className="tab-button tab-close"
             onClick={closeTabs}
             title="Hide"
+            aria-label="Hide patch and code views"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />

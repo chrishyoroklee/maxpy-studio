@@ -489,6 +489,13 @@ textarea:focus-visible {
   50%      { opacity: 1;   transform: scale(1.2); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .status-dot {
+    animation: none;
+    opacity: 0.8;
+  }
+}
+
 /* ==================== Iteration Summary ==================== */
 
 .iteration-summary {

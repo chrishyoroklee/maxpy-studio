@@ -46,7 +46,7 @@ function isM4LMode(): boolean {
   return params.get("embedded") === "m4l";
 }
 
-export type MessageStatus = "creating" | "running" | "debugging" | "finalizing" | "done" | "error";
+export type MessageStatus = "creating" | "running" | "debugging" | "done" | "error";
 
 export interface ChatMessage {
   id: string;
@@ -391,7 +391,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
   const buildTemplate = useCallback(
     async (templateName: string, templateLabel: string, model: string) => {
       const userMsg: ChatMessage = { id: nextId(), role: "user", content: `Build ${templateLabel} template` };
-      const assistantMsg: ChatMessage = { id: nextId(), role: "assistant", content: "", status: "running" };
+      const assistantMsg: ChatMessage = { id: nextId(), role: "assistant", content: "", status: "creating" };
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsLoading(true);
 
@@ -411,6 +411,10 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       try {
         const code = await fetchTemplateCode(templateName);
         const rewritten = rewriteSavePaths(code);
+
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, status: "running" as const } : m))
+        );
 
         const result = await runCode(rewritten);
 
