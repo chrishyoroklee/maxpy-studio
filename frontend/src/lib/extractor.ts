@@ -23,6 +23,11 @@ export function extractDescription(llmResponse: string): string | undefined {
   return match ? match[1].trim() : undefined;
 }
 
+export function extractSummary(llmResponse: string): string | undefined {
+  const match = /~~~summary\s*\n([\s\S]*?)~~~/.exec(llmResponse);
+  return match ? match[1].trim() : undefined;
+}
+
 export function extractCode(llmResponse: string): string {
   const pattern = /```python\s*\n([\s\S]*?)```/g;
   const matches: string[] = [];

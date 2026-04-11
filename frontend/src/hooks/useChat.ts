@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { streamLLM, RateLimitError } from "../api/client";
-import { extractCode, extractDescription, ExtractionError } from "../lib/extractor";
+import { extractCode, extractDescription, extractSummary, ExtractionError } from "../lib/extractor";
 import { rewriteSavePaths } from "../lib/pathRewriter";
 import { fetchTemplateCode } from "../lib/templates";
 import {
@@ -46,17 +46,22 @@ function isM4LMode(): boolean {
   return params.get("embedded") === "m4l";
 }
 
+export type MessageStatus = "creating" | "running" | "debugging" | "finalizing" | "done" | "error";
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   code?: string;
   description?: string;
+  iterationSummary?: string;
   amxdBytes?: Uint8Array;
   patchData?: PatchGraph;
   warnings?: ValidationIssue[];
   error?: string;
   isRateLimited?: boolean;
+  status?: MessageStatus;
+  statusDetail?: string;
 }
 
 let msgCounter = 0;
@@ -100,8 +105,10 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           content: d.content,
           code: d.code,
           description: d.description,
+          iterationSummary: d.iterationSummary,
           error: d.error,
           warnings: d.warnings as ValidationIssue[] | undefined,
+          status: d.role === "assistant" ? (d.error ? "error" : "done") : undefined,
         }));
         setMessages(loaded);
 
@@ -164,7 +171,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       }));
 
       const userMsg: ChatMessage = { id: nextId(), role: "user", content: prompt };
-      const assistantMsg: ChatMessage = { id: nextId(), role: "assistant", content: "" };
+      const assistantMsg: ChatMessage = { id: nextId(), role: "assistant", content: "", status: "creating" };
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsLoading(true);
 
@@ -210,29 +217,22 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
-                  ? { ...m, content: `Retrying (${attempt}/${MAX_RETRIES})...`, error: undefined, code: undefined }
+                  ? { ...m, status: "debugging", statusDetail: `retry ${attempt}/${MAX_RETRIES}`, error: undefined, code: undefined }
                   : m
               )
             );
           }
 
-          // Phase 1: Stream LLM response
+          // Phase 1: Stream LLM response (accumulate but don't show in UI)
           let fullResponse = "";
           let streamError = false;
           for await (const event of streamLLM(currentPrompt, model, currentHistory, attempt === 0 ? template : undefined, attempt === 0 ? templateCode : undefined)) {
             if (event.type === "chunk") {
               fullResponse += event.content || "";
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? { ...m, content: fullResponse }
-                    : m
-                )
-              );
             } else if (event.type === "error") {
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantId ? { ...m, error: event.content } : m
+                  m.id === assistantId ? { ...m, error: event.content, status: "error" } : m
                 )
               );
               streamError = true;
@@ -252,7 +252,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             if (attempt < MAX_RETRIES) continue; // Retry
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantId ? { ...m, error: msg } : m
+                m.id === assistantId ? { ...m, error: msg, status: "error" } : m
               )
             );
             if (pluginId) {
@@ -261,14 +261,15 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             return;
           }
 
-          // Extract description (non-critical)
+          // Extract description and iteration summary (non-critical)
           const description = extractDescription(fullResponse);
+          const iterationSummary = extractSummary(fullResponse);
 
           // Phase 3: Rewrite paths and execute in Pyodide
           const rewritten = rewriteSavePaths(code);
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, code: rewritten, description } : m
+              m.id === assistantId ? { ...m, status: "running", statusDetail: undefined } : m
             )
           );
 
@@ -290,7 +291,20 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
 
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantId ? { ...m, amxdBytes: result.amxdBytes!, patchData, warnings, description, content: fullResponse } : m
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      amxdBytes: result.amxdBytes!,
+                      patchData,
+                      warnings,
+                      description,
+                      iterationSummary,
+                      code: rewritten,
+                      content: fullResponse,
+                      status: "done",
+                      statusDetail: undefined,
+                    }
+                  : m
               )
             );
 
@@ -323,6 +337,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
                 content: fullResponse,
                 code: rewritten,
                 description,
+                iterationSummary,
                 warnings: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
                 amxdStoragePath,
               }).catch((e) => console.warn("Failed to save assistant message:", e));
@@ -339,7 +354,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             const errorMsg = `Execution failed:\n${result.stderr}`;
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantId ? { ...m, error: errorMsg, content: fullResponse } : m
+                m.id === assistantId ? { ...m, error: errorMsg, status: "error", content: fullResponse } : m
               )
             );
             saveGeneration({
@@ -362,7 +377,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, error: errorMsg, isRateLimited }
+              ? { ...m, error: errorMsg, isRateLimited, status: "error" }
               : m
           )
         );
@@ -376,7 +391,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
   const buildTemplate = useCallback(
     async (templateName: string, templateLabel: string, model: string) => {
       const userMsg: ChatMessage = { id: nextId(), role: "user", content: `Build ${templateLabel} template` };
-      const assistantMsg: ChatMessage = { id: nextId(), role: "assistant", content: "" };
+      const assistantMsg: ChatMessage = { id: nextId(), role: "assistant", content: "", status: "running" };
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsLoading(true);
 
@@ -397,10 +412,6 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
         const code = await fetchTemplateCode(templateName);
         const rewritten = rewriteSavePaths(code);
 
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, code: rewritten } : m))
-        );
-
         const result = await runCode(rewritten);
 
         if (result.success && result.amxdBytes) {
@@ -418,10 +429,20 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           }
 
           const content = "Base template ready.";
+          const iterationSummary = `Loaded the ${templateLabel} base template. Ready to customize — describe changes to refine it.`;
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? { ...m, content, amxdBytes: result.amxdBytes!, patchData, warnings }
+                ? {
+                    ...m,
+                    content,
+                    code: rewritten,
+                    iterationSummary,
+                    amxdBytes: result.amxdBytes!,
+                    patchData,
+                    warnings,
+                    status: "done",
+                  }
                 : m
             )
           );
@@ -456,6 +477,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
               role: "assistant",
               content,
               code: rewritten,
+              iterationSummary,
               warnings: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
               amxdStoragePath,
             }).catch((e) => console.warn("Failed to save assistant message:", e));
@@ -463,7 +485,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
         } else {
           const errorMsg = result.stderr || "Template build failed";
           setMessages((prev) =>
-            prev.map((m) => (m.id === assistantId ? { ...m, error: errorMsg, code: rewritten } : m))
+            prev.map((m) => (m.id === assistantId ? { ...m, error: errorMsg, code: rewritten, status: "error" } : m))
           );
           if (pluginId) {
             saveMessage(pluginId, {
@@ -477,7 +499,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Template build failed";
         setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, error: errorMsg } : m))
+          prev.map((m) => (m.id === assistantId ? { ...m, error: errorMsg, status: "error" } : m))
         );
       } finally {
         setIsLoading(false);

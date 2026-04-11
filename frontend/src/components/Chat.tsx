@@ -1,9 +1,30 @@
 import { useState, useRef, useEffect } from "react";
-import type { ChatMessage } from "../hooks/useChat";
+import type { ChatMessage, MessageStatus } from "../hooks/useChat";
 import { downloadBlob } from "../lib/download";
 import { CodePatchTabs } from "./CodePatchTabs";
 import { logEvent } from "../lib/firestore";
 import { useEmbedMode } from "../hooks/useEmbedded";
+
+const STATUS_LABELS: Record<MessageStatus, string> = {
+  creating: "Creating plugin",
+  running: "Running code",
+  debugging: "Debugging",
+  finalizing: "Finalizing",
+  done: "Done",
+  error: "Error",
+};
+
+function StatusIndicator({ status, detail }: { status: MessageStatus; detail?: string }) {
+  const label = STATUS_LABELS[status] || "Working";
+  return (
+    <div className="status-indicator">
+      <span className="status-dot" />
+      <span className="status-label">
+        {label}{detail ? ` (${detail})` : ""}...
+      </span>
+    </div>
+  );
+}
 
 interface Props {
   messages: ChatMessage[];
@@ -135,43 +156,52 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
           </>
         ) : (
           <>
-            {messages.map((msg) => (
-              <div key={msg.id} className={`message ${msg.role}`}>
-                <div className="message-role">
-                  {msg.role === "user" ? "You" : "Studio"}
+            {messages.map((msg) => {
+              const isLoading = msg.role === "assistant" && msg.status && msg.status !== "done" && msg.status !== "error";
+              return (
+                <div key={msg.id} className={`message ${msg.role}`}>
+                  <div className="message-role">
+                    {msg.role === "user" ? "You" : "Studio"}
+                  </div>
+                  <div className="message-content">
+                    {msg.role === "user" && msg.content}
+                    {isLoading && (
+                      <StatusIndicator status={msg.status!} detail={msg.statusDetail} />
+                    )}
+                    {msg.role === "assistant" && msg.status === "done" && msg.iterationSummary && (
+                      <p className="iteration-summary">{msg.iterationSummary}</p>
+                    )}
+                    {msg.role === "assistant" && msg.status === "done" && msg.code && (
+                      <CodePatchTabs code={msg.code} patchData={msg.patchData} warnings={msg.warnings} />
+                    )}
+                    {msg.role === "assistant" && msg.status === "done" && msg.description && (
+                      <p className="plugin-description">{msg.description}</p>
+                    )}
+                    {msg.error && (
+                      <div className={`message-error${msg.isRateLimited ? " message-rate-limited" : ""}`}>
+                        {msg.isRateLimited ? "Slow down \u2014 " : ""}{msg.error}
+                      </div>
+                    )}
+                    {msg.amxdBytes && !isM4L && (
+                      <button
+                        className="download-button"
+                        onClick={() => { logEvent("download", { source: "chat" }); downloadBlob(msg.amxdBytes!, filename); }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Download .amxd
+                      </button>
+                    )}
+                    {msg.amxdBytes && isM4L && (
+                      <div className="m4l-loaded-badge">✓ Loaded into device</div>
+                    )}
+                  </div>
                 </div>
-                <div className="message-content">
-                  {msg.content}
-                  {msg.code && (
-                    <CodePatchTabs code={msg.code} patchData={msg.patchData} warnings={msg.warnings} />
-                  )}
-                  {msg.description && (
-                    <p className="plugin-description">{msg.description}</p>
-                  )}
-                  {msg.error && (
-                    <div className={`message-error${msg.isRateLimited ? " message-rate-limited" : ""}`}>
-                      {msg.isRateLimited ? "Slow down \u2014 " : ""}{msg.error}
-                    </div>
-                  )}
-                  {msg.amxdBytes && !isM4L && (
-                    <button
-                      className="download-button"
-                      onClick={() => { logEvent("download", { source: "chat" }); downloadBlob(msg.amxdBytes!, filename); }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                      Download .amxd
-                    </button>
-                  )}
-                  {msg.amxdBytes && isM4L && (
-                    <div className="m4l-loaded-badge">✓ Loaded into device</div>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {isLoading && (
               <div className="loading-indicator">

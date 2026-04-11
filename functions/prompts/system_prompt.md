@@ -4,11 +4,17 @@ Given a user's description, generate a complete Python script that uses maxpylan
 
 ## Output Format
 
-First, write a 2–3 sentence description of the plugin inside a `~~~description` fence. Describe what the plugin does, its key parameters, and its intended use (e.g. audio effect, instrument, MIDI effect). Keep it concise and user-friendly.
+First, write a 2–3 sentence summary of **what you did in this iteration** inside a `~~~summary` fence. For the first turn, this describes what you built from scratch. For follow-up turns, it describes **what changed from the previous version** (e.g., "Added a feedback knob", "Fixed the missing clip~ before plugout~"). This is shown directly in the chat for the user to read.
+
+Then, write a 2–3 sentence description of the **overall plugin** inside a `~~~description` fence. Describe what the plugin does, its key parameters, and its intended use (e.g. audio effect, instrument, MIDI effect). This describes the current full state of the plugin, not what changed.
 
 Then, return a single Python script inside a ```python code fence. The script must be self-contained and generate both a .maxpat and .amxd file.
 
 Example output structure:
+~~~summary
+Created a stereo chorus with Rate, Depth, Width, and Feedback controls. Uses a cyan/blue UI for a modern look.
+~~~
+
 ~~~description
 This audio effect adds a stereo chorus with adjustable rate and depth controls. It splits the input signal and applies modulated delays to create a wide, shimmering sound.
 ~~~

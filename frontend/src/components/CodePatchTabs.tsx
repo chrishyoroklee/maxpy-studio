@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { PatchGraph } from "./PatchGraph";
 import type { PatchGraph as PatchGraphData } from "../lib/patchGraphParser";
 import type { ValidationIssue } from "../lib/patchValidator";
+import { logEvent } from "../lib/firestore";
 import { EditorView } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { python } from "@codemirror/lang-python";
@@ -17,9 +18,18 @@ interface Props {
 type Tab = "patch" | "code";
 
 export function CodePatchTabs({ code, patchData, warnings }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>("patch");
+  const [activeTab, setActiveTab] = useState<Tab | null>(null); // null = collapsed (button gate)
   const [fullscreen, setFullscreen] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
+
+  const openTab = (tab: Tab) => {
+    setActiveTab(tab);
+    logEvent("view_open", { view: tab });
+  };
+
+  const closeTabs = () => {
+    setActiveTab(null);
+  };
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -89,6 +99,30 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
     }
   };
 
+  // Collapsed state: show two big buttons as a gate
+  if (activeTab === null) {
+    return (
+      <div className="view-gate">
+        <button className="view-gate-button" onClick={() => openTab("patch")}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+          </svg>
+          <span>View Patch Graph</span>
+        </button>
+        <button className="view-gate-button" onClick={() => openTab("code")}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
+          </svg>
+          <span>View Python Code</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="code-patch-tabs">
@@ -129,6 +163,16 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
               </svg>
             </button>
           )}
+          <button
+            className="tab-button tab-close"
+            onClick={closeTabs}
+            title="Hide"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
         <div className="tab-content">
           {activeTab === "patch" && warnings && warnings.length > 0 && (
