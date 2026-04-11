@@ -54,6 +54,7 @@ const SUGGESTIONS = [
   { label: "Compressor", desc: "Bus glue & dynamics", prompt: "Add a ratio control and sidechain input", template: "m4l_compressor" },
   { label: "Mono Synth", desc: "Classic subtractive mono", prompt: "Add a filter envelope and a second oscillator (detuned saw)", template: "m4l_mono_synth" },
   { label: "Bass Synth", desc: "Moog-style sub bass", prompt: "Add a second saw oscillator detuned by 7 cents", template: "m4l_bass_synth" },
+  { label: "Rhodes EP", desc: "Warm electric piano with bell tine", prompt: "Add a tremolo effect with rate and depth controls", template: "m4l_rhodes_piano" },
 ];
 
 const MODELS = [
