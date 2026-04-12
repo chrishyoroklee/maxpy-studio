@@ -131,10 +131,15 @@ interface PatchGraphProps {
 
 export function PatchGraph({ nodes, edges }: PatchGraphProps) {
   const hasLoggedInteraction = useRef(false);
+  const isInitialFit = useRef(true);
 
-  // Reset when component re-mounts or new patch data arrives
+  // Reset when new patch data arrives
   useEffect(() => {
     hasLoggedInteraction.current = false;
+    isInitialFit.current = true;
+    // Wait for fitView animation to settle before allowing interaction logging
+    const t = setTimeout(() => { isInitialFit.current = false; }, 500);
+    return () => clearTimeout(t);
   }, [nodes]);
 
   const rfEdges: Edge[] = useMemo(
@@ -179,6 +184,7 @@ export function PatchGraph({ nodes, edges }: PatchGraphProps) {
         maxZoom={4}
         proOptions={{ hideAttribution: true }}
         onMoveEnd={() => {
+          if (isInitialFit.current) return; // ignore fitView's auto-pan
           if (!hasLoggedInteraction.current) {
             hasLoggedInteraction.current = true;
             logEvent("graph_interact", { type: "zoom_pan" });

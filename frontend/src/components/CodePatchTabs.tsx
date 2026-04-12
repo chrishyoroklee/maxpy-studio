@@ -31,7 +31,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
   };
 
   const closeTabs = () => {
-    if (tabOpenTime.current) {
+    if (tabOpenTime.current && activeTab) {
       const duration = Date.now() - tabOpenTime.current;
       logEvent("view_close", {
         view: activeTab,
@@ -41,6 +41,17 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
     }
     setActiveTab(null);
     tabOpenTime.current = null;
+  };
+
+  // Switch between tabs without collapsing — closes timing for the old tab, opens for the new
+  const switchTab = (tab: Tab) => {
+    if (tabOpenTime.current && activeTab && activeTab !== tab) {
+      const duration = Date.now() - tabOpenTime.current;
+      logEvent("view_close", { view: activeTab, durationMs: duration, wasGlance: duration < 3000 });
+    }
+    setActiveTab(tab);
+    tabOpenTime.current = Date.now();
+    logEvent("view_open", { view: tab });
   };
 
   useEffect(() => {
@@ -141,7 +152,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
         <div className="tabs-bar">
           <button
             className={`tab-button ${activeTab === "patch" ? "active" : ""}`}
-            onClick={() => setActiveTab("patch")}
+            onClick={() => switchTab("patch")}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="7" height="7" />
@@ -153,7 +164,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
           </button>
           <button
             className={`tab-button ${activeTab === "code" ? "active" : ""}`}
-            onClick={() => setActiveTab("code")}
+            onClick={() => switchTab("code")}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="16 18 22 12 16 6" />

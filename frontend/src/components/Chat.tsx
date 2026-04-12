@@ -228,27 +228,27 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                         <button
                           className="rating-btn rating-up"
                           onClick={() => {
-                            logEvent("plugin_rating", { rating: "up", pluginId });
+                            logEvent("plugin_rating", { rating: "up", pluginId: pluginId || undefined, messageId: msg.id });
                             setRatedMessages(prev => new Set(prev).add(msg.id));
                           }}
                           title="Good result"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M7 22V11l5-9 1.5 1c.8.6 1.2 1.5 1 2.5L13.5 11H20a2 2 0 012 2v2a2 2 0 01-.1.6l-3 8A2 2 0 0117 25H7z" />
-                            <path d="M7 11H4a2 2 0 00-2 2v7a2 2 0 002 2h3" />
+                            <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" />
+                            <path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
                           </svg>
                         </button>
                         <button
                           className="rating-btn rating-down"
                           onClick={() => {
-                            logEvent("plugin_rating", { rating: "down", pluginId });
+                            logEvent("plugin_rating", { rating: "down", pluginId: pluginId || undefined, messageId: msg.id });
                             setRatedMessages(prev => new Set(prev).add(msg.id));
                           }}
                           title="Needs improvement"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M17 2V13l-5 9-1.5-1c-.8-.6-1.2-1.5-1-2.5L10.5 13H4a2 2 0 01-2-2V9a2 2 0 01.1-.6l3-8A2 2 0 017-1h10z" />
-                            <path d="M17 13h3a2 2 0 002-2V4a2 2 0 00-2-2h-3" />
+                            <path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z" />
+                            <path d="M17 2h3a2 2 0 012 2v7a2 2 0 01-2 2h-3" />
                           </svg>
                         </button>
                       </div>
