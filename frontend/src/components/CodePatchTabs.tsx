@@ -22,13 +22,36 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
   const [fullscreen, setFullscreen] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
 
+  const tabOpenTime = useRef<number | null>(null);
+
   const openTab = (tab: Tab) => {
     setActiveTab(tab);
+    tabOpenTime.current = Date.now();
     logEvent("view_open", { view: tab });
   };
 
   const closeTabs = () => {
+    if (tabOpenTime.current && activeTab) {
+      const duration = Date.now() - tabOpenTime.current;
+      logEvent("view_close", {
+        view: activeTab,
+        durationMs: duration,
+        wasGlance: duration < 3000,
+      });
+    }
     setActiveTab(null);
+    tabOpenTime.current = null;
+  };
+
+  // Switch between tabs without collapsing — closes timing for the old tab, opens for the new
+  const switchTab = (tab: Tab) => {
+    if (tabOpenTime.current && activeTab && activeTab !== tab) {
+      const duration = Date.now() - tabOpenTime.current;
+      logEvent("view_close", { view: activeTab, durationMs: duration, wasGlance: duration < 3000 });
+    }
+    setActiveTab(tab);
+    tabOpenTime.current = Date.now();
+    logEvent("view_open", { view: tab });
   };
 
   useEffect(() => {
@@ -129,7 +152,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
         <div className="tabs-bar">
           <button
             className={`tab-button ${activeTab === "patch" ? "active" : ""}`}
-            onClick={() => setActiveTab("patch")}
+            onClick={() => switchTab("patch")}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="7" height="7" />
@@ -141,7 +164,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
           </button>
           <button
             className={`tab-button ${activeTab === "code" ? "active" : ""}`}
-            onClick={() => setActiveTab("code")}
+            onClick={() => switchTab("code")}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="16 18 22 12 16 6" />
@@ -152,7 +175,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
           {activeTab === "patch" && hasPatch && (
             <button
               className="tab-button tab-expand"
-              onClick={() => setFullscreen(true)}
+              onClick={() => { setFullscreen(true); logEvent("graph_fullscreen_open"); }}
               title="Expand to fullscreen"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -202,7 +225,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
           )}
           {activeTab === "patch" && (
             hasPatch ? (
-              <div className="patch-graph-container" onClick={() => setFullscreen(true)} style={{ cursor: "pointer" }}>
+              <div className="patch-graph-container" onClick={() => { setFullscreen(true); logEvent("graph_fullscreen_open"); }} style={{ cursor: "pointer" }}>
                 <PatchGraph nodes={patchData.nodes} edges={patchData.edges} />
               </div>
             ) : (

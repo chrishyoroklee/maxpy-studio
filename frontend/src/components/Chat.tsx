@@ -43,7 +43,7 @@ interface Props {
   pluginName?: string;
 }
 
-const SUGGESTIONS = [
+const AUDIO_EFFECTS = [
   { label: "Chorus", desc: "Stereo widening with rate & depth", prompt: "Add a feedback knob and make the color blue", template: "m4l_chorus" },
   { label: "Tremolo", desc: "Amplitude modulation", prompt: "Add a waveform selector (sine/square) and make the color green", template: "m4l_tremolo" },
   { label: "3-Band EQ", desc: "Shape lows, mids & highs", prompt: "Add a Q control for each band", template: "m4l_eq" },
@@ -52,11 +52,19 @@ const SUGGESTIONS = [
   { label: "Delay", desc: "Stereo echo with feedback", prompt: "Add ping-pong stereo and a filter in the feedback loop", template: "m4l_stereo_delay" },
   { label: "Distortion", desc: "Overdrive & saturation", prompt: "Add a second distortion stage and make the color orange", template: "m4l_distortion" },
   { label: "Compressor", desc: "Bus glue & dynamics", prompt: "Add a ratio control and sidechain input", template: "m4l_compressor" },
+];
+
+const VIRTUAL_INSTRUMENTS = [
   { label: "Mono Synth", desc: "Classic subtractive mono", prompt: "Add a filter envelope and a second oscillator (detuned saw)", template: "m4l_mono_synth" },
   { label: "Bass Synth", desc: "Moog-style sub bass", prompt: "Add a second saw oscillator detuned by 7 cents", template: "m4l_bass_synth" },
   { label: "Rhodes EP", desc: "Warm electric piano with bell tine", prompt: "Add a tremolo effect with rate and depth controls", template: "m4l_rhodes_piano" },
   { label: "Organ", desc: "Hammond-style drawbar organ", prompt: "Add a Leslie-style rotary speaker effect", template: "m4l_organ" },
   { label: "Upright Piano", desc: "Acoustic piano with rich harmonics", prompt: "Add a soft pedal that dampens the brightness", template: "m4l_upright_piano" },
+];
+
+const SUGGESTION_SECTIONS = [
+  { title: "Audio Effects", items: AUDIO_EFFECTS },
+  { title: "Virtual Instruments", items: VIRTUAL_INSTRUMENTS },
 ];
 
 const MODELS = [
@@ -68,11 +76,12 @@ function slugify(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "device";
 }
 
-export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideReady, embedded, model, setModel, pluginName }: Props) {
+export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideReady, embedded, model, setModel, pluginName, pluginId }: Props) {
   const embedMode = useEmbedMode();
   const isM4L = embedMode === "m4l";
   const filename = `${slugify(pluginName || "device")}.amxd`;
   const [input, setInput] = useState("");
+  const [ratedMessages, setRatedMessages] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -107,19 +116,24 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
           <div className="welcome">
             <h2>MaxPy Studio</h2>
             <p>Describe a plugin. Get an .amxd for Ableton.</p>
-            <div className="suggestions">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s.label}
-                  className="suggestion-card"
-                  disabled={!pyodideReady || isLoading}
-                  onClick={() => handleTemplateClick(s.template, s.label)}
-                >
-                  <span className="suggestion-label">{s.label}</span>
-                  <span className="suggestion-desc">{s.desc}</span>
-                </button>
-              ))}
-            </div>
+            {SUGGESTION_SECTIONS.map((section) => (
+              <div className="suggestion-section" key={section.title}>
+                <div className="suggestion-section-title">{section.title}</div>
+                <div className="suggestions">
+                  {section.items.map((s) => (
+                    <button
+                      key={s.label}
+                      className="suggestion-card"
+                      disabled={!pyodideReady || isLoading}
+                      onClick={() => handleTemplateClick(s.template, s.label)}
+                    >
+                      <span className="suggestion-label">{s.label}</span>
+                      <span className="suggestion-desc">{s.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -208,6 +222,39 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                         </svg>
                         Download .amxd
                       </button>
+                    )}
+                    {msg.amxdBytes && !isM4L && !ratedMessages.has(msg.id) && (
+                      <div className="rating-buttons">
+                        <button
+                          className="rating-btn rating-up"
+                          onClick={() => {
+                            logEvent("plugin_rating", { rating: "up", pluginId: pluginId || undefined, messageId: msg.id });
+                            setRatedMessages(prev => new Set(prev).add(msg.id));
+                          }}
+                          title="Good result"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" />
+                            <path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+                          </svg>
+                        </button>
+                        <button
+                          className="rating-btn rating-down"
+                          onClick={() => {
+                            logEvent("plugin_rating", { rating: "down", pluginId: pluginId || undefined, messageId: msg.id });
+                            setRatedMessages(prev => new Set(prev).add(msg.id));
+                          }}
+                          title="Needs improvement"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z" />
+                            <path d="M17 2h3a2 2 0 012 2v7a2 2 0 01-2 2h-3" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    {msg.amxdBytes && !isM4L && ratedMessages.has(msg.id) && (
+                      <span className="rating-thanks">Thanks for the feedback!</span>
                     )}
                     {msg.amxdBytes && isM4L && (
                       <div className="m4l-loaded-badge">✓ Loaded into device</div>

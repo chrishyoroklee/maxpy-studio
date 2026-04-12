@@ -17,8 +17,9 @@ import {
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import type { PatchNode, PatchEdge, PatchNodeData } from "../lib/patchGraphParser";
+import { logEvent } from "../lib/firestore";
 import "./PatchGraph.css";
 
 /* ------------------------------------------------------------------ */
@@ -129,6 +130,18 @@ interface PatchGraphProps {
 }
 
 export function PatchGraph({ nodes, edges }: PatchGraphProps) {
+  const hasLoggedInteraction = useRef(false);
+  const isInitialFit = useRef(true);
+
+  // Reset when new patch data arrives
+  useEffect(() => {
+    hasLoggedInteraction.current = false;
+    isInitialFit.current = true;
+    // Wait for fitView animation to settle before allowing interaction logging
+    const t = setTimeout(() => { isInitialFit.current = false; }, 500);
+    return () => clearTimeout(t);
+  }, [nodes]);
+
   const rfEdges: Edge[] = useMemo(
     () =>
       edges.map((e) => ({
@@ -170,6 +183,19 @@ export function PatchGraph({ nodes, edges }: PatchGraphProps) {
         minZoom={0.2}
         maxZoom={4}
         proOptions={{ hideAttribution: true }}
+        onMoveEnd={() => {
+          if (isInitialFit.current) return; // ignore fitView's auto-pan
+          if (!hasLoggedInteraction.current) {
+            hasLoggedInteraction.current = true;
+            logEvent("graph_interact", { type: "zoom_pan" });
+          }
+        }}
+        onNodeClick={() => {
+          if (!hasLoggedInteraction.current) {
+            hasLoggedInteraction.current = true;
+            logEvent("graph_interact", { type: "node_click" });
+          }
+        }}
       >
         <Background gap={20} size={1} color="rgba(255,255,255,0.03)" />
         <Controls showInteractive={false} />

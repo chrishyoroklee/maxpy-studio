@@ -216,6 +216,7 @@ export async function saveGeneration(data: {
   status: "success" | "error";
   errorMessage?: string;
   validationIssues?: Array<{ severity: string; code: string; message: string }>;
+  attemptNumber?: number;
 }): Promise<string> {
   const u = uid();
   if (!u) return "";
