@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { loadPlugins, createPlugin, deletePlugin, updatePlugin, type PluginDoc } from "../lib/firestore";
+import { loadPlugins, createPlugin, deletePlugin, updatePlugin, logEvent, type PluginDoc } from "../lib/firestore";
 
 interface Props {
   onOpen: (pluginId: string, pluginName?: string) => void;
@@ -43,6 +43,7 @@ export function PluginList({ onOpen, defaultModel }: Props) {
     try {
       const id = await createPlugin(name, defaultModel);
       if (id) {
+        logEvent("plugin_create", { pluginId: id, templateUsed: undefined });
         setShowCreateModal(false);
         setNewName("");
         onOpen(id, newName);
@@ -54,6 +55,7 @@ export function PluginList({ onOpen, defaultModel }: Props) {
 
   const handleDelete = async (pluginId: string) => {
     await deletePlugin(pluginId);
+    logEvent("plugin_delete", { pluginId });
     setPlugins((prev) => prev.filter((p) => p.id !== pluginId));
     setDeleteConfirmId(null);
   };
@@ -62,6 +64,7 @@ export function PluginList({ onOpen, defaultModel }: Props) {
     const trimmed = renameName.trim();
     if (!trimmed) { setRenameId(null); return; }
     await updatePlugin(pluginId, { name: trimmed });
+    logEvent("plugin_rename", { pluginId });
     setPlugins((prev) => prev.map((p) => p.id === pluginId ? { ...p, name: trimmed } : p));
     setRenameId(null);
     setRenameName("");
