@@ -185,10 +185,11 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       const promptId = await savePrompt({ prompt, model, templateUsed: template, pluginId: pluginId || undefined }).catch(() => "");
 
       // Log prompt analysis data
-      const words = prompt.trim().split(/\s+/);
+      const trimmed = prompt.trim();
+      const wordCount = trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length;
       logEvent("prompt_submitted", {
         promptLength: prompt.length,
-        wordCount: words.length,
+        wordCount,
         hasTemplateContext: !!template,
         isFollowUp: history.length > 0,
         pluginId: pluginId || undefined,
@@ -452,9 +453,10 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       }).catch(() => "");
 
       // Log prompt analysis data for template build
+      const tplTrimmed = userMsg.content.trim();
       logEvent("prompt_submitted", {
         promptLength: userMsg.content.length,
-        wordCount: userMsg.content.trim().split(/\s+/).length,
+        wordCount: tplTrimmed.length === 0 ? 0 : tplTrimmed.split(/\s+/).length,
         hasTemplateContext: true,
         isFollowUp: false,
         isTemplateInstant: true,

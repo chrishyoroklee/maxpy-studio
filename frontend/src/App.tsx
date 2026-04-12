@@ -17,9 +17,14 @@ function App() {
   const { user, loading: authLoading, signIn, signUp, signInWithGoogle, logout, resetPassword, resendVerification, refreshUser, updateDisplayName, deleteAccount } = useAuth();
   const { ready, loading: pyodideLoading, error: pyodideError, runCode } = usePyodide();
 
+  // Log session_start once when user first authenticates (logEvent requires auth)
+  const sessionLogged = useRef(false);
   useEffect(() => {
-    logEvent("session_start");
-  }, []);
+    if (user && !sessionLogged.current) {
+      sessionLogged.current = true;
+      logEvent("session_start");
+    }
+  }, [user]);
 
   const [view, setView] = useState<View>("plugins");
   const [activePluginId, setActivePluginId] = useState<string | null>(null);
