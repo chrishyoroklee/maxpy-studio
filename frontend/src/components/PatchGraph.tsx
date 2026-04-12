@@ -17,8 +17,9 @@ import {
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import type { PatchNode, PatchEdge, PatchNodeData } from "../lib/patchGraphParser";
+import { logEvent } from "../lib/firestore";
 import "./PatchGraph.css";
 
 /* ------------------------------------------------------------------ */
@@ -129,6 +130,13 @@ interface PatchGraphProps {
 }
 
 export function PatchGraph({ nodes, edges }: PatchGraphProps) {
+  const hasLoggedInteraction = useRef(false);
+
+  // Reset when component re-mounts or new patch data arrives
+  useEffect(() => {
+    hasLoggedInteraction.current = false;
+  }, [nodes]);
+
   const rfEdges: Edge[] = useMemo(
     () =>
       edges.map((e) => ({
@@ -170,6 +178,18 @@ export function PatchGraph({ nodes, edges }: PatchGraphProps) {
         minZoom={0.2}
         maxZoom={4}
         proOptions={{ hideAttribution: true }}
+        onMoveEnd={() => {
+          if (!hasLoggedInteraction.current) {
+            hasLoggedInteraction.current = true;
+            logEvent("graph_interact", { type: "zoom_pan" });
+          }
+        }}
+        onNodeClick={() => {
+          if (!hasLoggedInteraction.current) {
+            hasLoggedInteraction.current = true;
+            logEvent("graph_interact", { type: "node_click" });
+          }
+        }}
       >
         <Background gap={20} size={1} color="rgba(255,255,255,0.03)" />
         <Controls showInteractive={false} />

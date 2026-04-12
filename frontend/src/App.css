@@ -619,6 +619,49 @@ textarea:focus-visible {
   transform: translateY(0);
 }
 
+/* ==================== Rating ==================== */
+
+.rating-buttons {
+  display: inline-flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.rating-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 14px;
+  transition: all 0.15s;
+}
+
+.rating-btn:hover {
+  background: var(--bg-surface);
+}
+
+.rating-up:hover {
+  color: #4ade80;
+  border-color: #4ade80;
+}
+
+.rating-down:hover {
+  color: #f87171;
+  border-color: #f87171;
+}
+
+.rating-thanks {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
 /* ==================== Loading ==================== */
 
 .loading-indicator {

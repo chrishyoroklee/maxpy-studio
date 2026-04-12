@@ -76,11 +76,12 @@ function slugify(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "device";
 }
 
-export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideReady, embedded, model, setModel, pluginName }: Props) {
+export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideReady, embedded, model, setModel, pluginName, pluginId }: Props) {
   const embedMode = useEmbedMode();
   const isM4L = embedMode === "m4l";
   const filename = `${slugify(pluginName || "device")}.amxd`;
   const [input, setInput] = useState("");
+  const [ratedMessages, setRatedMessages] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -221,6 +222,39 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                         </svg>
                         Download .amxd
                       </button>
+                    )}
+                    {msg.amxdBytes && !isM4L && !ratedMessages.has(msg.id) && (
+                      <div className="rating-buttons">
+                        <button
+                          className="rating-btn rating-up"
+                          onClick={() => {
+                            logEvent("plugin_rating", { rating: "up", pluginId });
+                            setRatedMessages(prev => new Set(prev).add(msg.id));
+                          }}
+                          title="Good result"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M7 22V11l5-9 1.5 1c.8.6 1.2 1.5 1 2.5L13.5 11H20a2 2 0 012 2v2a2 2 0 01-.1.6l-3 8A2 2 0 0117 25H7z" />
+                            <path d="M7 11H4a2 2 0 00-2 2v7a2 2 0 002 2h3" />
+                          </svg>
+                        </button>
+                        <button
+                          className="rating-btn rating-down"
+                          onClick={() => {
+                            logEvent("plugin_rating", { rating: "down", pluginId });
+                            setRatedMessages(prev => new Set(prev).add(msg.id));
+                          }}
+                          title="Needs improvement"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M17 2V13l-5 9-1.5-1c-.8-.6-1.2-1.5-1-2.5L10.5 13H4a2 2 0 01-2-2V9a2 2 0 01.1-.6l3-8A2 2 0 017-1h10z" />
+                            <path d="M17 13h3a2 2 0 002-2V4a2 2 0 00-2-2h-3" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    {msg.amxdBytes && !isM4L && ratedMessages.has(msg.id) && (
+                      <span className="rating-thanks">Thanks for the feedback!</span>
                     )}
                     {msg.amxdBytes && isM4L && (
                       <div className="m4l-loaded-badge">✓ Loaded into device</div>

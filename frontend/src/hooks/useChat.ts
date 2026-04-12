@@ -11,6 +11,7 @@ import {
   loadMessages,
   loadPlugin,
   updatePlugin,
+  logEvent,
 } from "../lib/firestore";
 import { uploadAmxd, downloadAmxd } from "../lib/storage";
 import { auth } from "../lib/firebase";
@@ -249,7 +250,19 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             const msg = err instanceof ExtractionError ? err.message : "Code extraction failed";
             lastCode = "";
             errorHistory.push({ error: msg, code: "" });
+            logEvent("retry_attempt", {
+              attempt: attempt + 1,
+              maxAttempts: MAX_RETRIES + 1,
+              errorType: "extraction",
+              errorMessage: msg.slice(0, 500),
+              pluginId: pluginId || undefined,
+            });
             if (attempt < MAX_RETRIES) continue; // Retry
+            logEvent("generation_failure", {
+              totalAttempts: MAX_RETRIES + 1,
+              lastErrorType: "extraction",
+              pluginId: pluginId || undefined,
+            });
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId ? { ...m, error: msg, status: "error" } : m
@@ -308,6 +321,13 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
               )
             );
 
+            logEvent("generation_success", {
+              successAttempt: attempt + 1,
+              totalAttempts: attempt + 1,
+              hadRetries: attempt > 0,
+              pluginId: pluginId || undefined,
+            });
+
             const generationId = await saveGeneration({
               promptId,
               pluginId: pluginId || undefined,
@@ -315,6 +335,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
               extractedCode: rewritten,
               status: "success",
               validationIssues: warnings?.map(({ severity, code, message }) => ({ severity, code, message })),
+              attemptNumber: attempt + 1,
             }).catch((e) => { console.warn("saveGeneration failed:", e); return ""; });
 
             let amxdStoragePath: string | undefined;
@@ -348,10 +369,22 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           // FAIL — capture error for retry
           lastCode = rewritten;
           errorHistory.push({ error: result.stderr, code: rewritten });
+          logEvent("retry_attempt", {
+            attempt: attempt + 1,
+            maxAttempts: MAX_RETRIES + 1,
+            errorType: "execution",
+            errorMessage: result.stderr.slice(0, 500),
+            pluginId: pluginId || undefined,
+          });
 
           if (attempt === MAX_RETRIES) {
             // Final failure — show error
             const errorMsg = `Execution failed:\n${result.stderr}`;
+            logEvent("generation_failure", {
+              totalAttempts: MAX_RETRIES + 1,
+              lastErrorType: "execution",
+              pluginId: pluginId || undefined,
+            });
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId ? { ...m, error: errorMsg, status: "error", content: fullResponse } : m
@@ -364,6 +397,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
               extractedCode: rewritten,
               status: "error",
               errorMessage: result.stderr,
+              attemptNumber: attempt + 1,
             }).catch(() => {});
 
             if (pluginId) {
