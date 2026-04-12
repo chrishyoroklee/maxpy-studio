@@ -23,6 +23,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
   const [validationOpen, setValidationOpen] = useState(false);
 
   const tabOpenTime = useRef<number | null>(null);
+  const fullscreenOpenTime = useRef<number | null>(null);
 
   const openTab = (tab: Tab) => {
     setActiveTab(tab);
@@ -54,10 +55,24 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
     logEvent("view_open", { view: tab });
   };
 
+  const toggleValidation = () => {
+    const newState = !validationOpen;
+    setValidationOpen(newState);
+    if (newState) {
+      logEvent("validation_expand", { warningCount: warnings?.length || 0 });
+    }
+  };
+
   useEffect(() => {
     if (!fullscreen) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFullscreen(false);
+      if (e.key === "Escape") {
+        if (fullscreenOpenTime.current) {
+          logEvent("graph_fullscreen_close", { durationMs: Date.now() - fullscreenOpenTime.current });
+          fullscreenOpenTime.current = null;
+        }
+        setFullscreen(false);
+      }
     };
     document.addEventListener("keydown", handleKey);
     document.body.style.overflow = "hidden";
@@ -175,7 +190,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
           {activeTab === "patch" && hasPatch && (
             <button
               className="tab-button tab-expand"
-              onClick={() => { setFullscreen(true); logEvent("graph_fullscreen_open"); }}
+              onClick={() => { setFullscreen(true); fullscreenOpenTime.current = Date.now(); logEvent("graph_fullscreen_open"); }}
               title="Expand to fullscreen"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -203,7 +218,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
             <div className="validation-panel">
               <button
                 className="validation-summary"
-                onClick={() => setValidationOpen((o) => !o)}
+                onClick={toggleValidation}
               >
                 <span className={`validation-summary-icon${errorCount > 0 ? " validation-issue--error" : " validation-issue--warning"}`}>
                   {errorCount > 0 ? "\u2716" : "\u26A0"}
@@ -225,7 +240,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
           )}
           {activeTab === "patch" && (
             hasPatch ? (
-              <div className="patch-graph-container" onClick={() => { setFullscreen(true); logEvent("graph_fullscreen_open"); }} style={{ cursor: "pointer" }}>
+              <div className="patch-graph-container" onClick={() => { setFullscreen(true); fullscreenOpenTime.current = Date.now(); logEvent("graph_fullscreen_open"); }} style={{ cursor: "pointer" }}>
                 <PatchGraph nodes={patchData.nodes} edges={patchData.edges} />
               </div>
             ) : (
@@ -254,7 +269,13 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
 
       {fullscreen && hasPatch && createPortal(
         <div className="patch-fullscreen-overlay">
-          <button className="patch-fullscreen-close" onClick={() => setFullscreen(false)}>
+          <button className="patch-fullscreen-close" onClick={() => {
+            if (fullscreenOpenTime.current) {
+              logEvent("graph_fullscreen_close", { durationMs: Date.now() - fullscreenOpenTime.current });
+              fullscreenOpenTime.current = null;
+            }
+            setFullscreen(false);
+          }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />

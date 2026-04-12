@@ -184,6 +184,18 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       // Log prompt (fire and forget)
       const promptId = await savePrompt({ prompt, model, templateUsed: template, pluginId: pluginId || undefined }).catch(() => "");
 
+      // Log prompt analysis data
+      const trimmed = prompt.trim();
+      const wordCount = trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length;
+      logEvent("prompt_submitted", {
+        promptLength: prompt.length,
+        wordCount,
+        hasTemplateContext: !!template,
+        isFollowUp: history.length > 0,
+        pluginId: pluginId || undefined,
+        model,
+      });
+
       const assistantId = assistantMsg.id;
 
       try {
@@ -439,6 +451,19 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
         templateUsed: templateName,
         pluginId: pluginId || undefined,
       }).catch(() => "");
+
+      // Log prompt analysis data for template build
+      const tplTrimmed = userMsg.content.trim();
+      logEvent("prompt_submitted", {
+        promptLength: userMsg.content.length,
+        wordCount: tplTrimmed.length === 0 ? 0 : tplTrimmed.split(/\s+/).length,
+        hasTemplateContext: true,
+        isFollowUp: false,
+        isTemplateInstant: true,
+        templateName: templateName,
+        pluginId: pluginId || undefined,
+        model,
+      });
 
       const assistantId = assistantMsg.id;
 

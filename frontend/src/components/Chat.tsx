@@ -213,7 +213,7 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                     {msg.amxdBytes && !isM4L && (
                       <button
                         className="download-button"
-                        onClick={() => { logEvent("download", { source: "chat" }); downloadBlob(msg.amxdBytes!, filename); }}
+                        onClick={() => { logEvent("download", { source: "chat", pluginId: pluginId || undefined, hasWarnings: (msg.warnings?.length || 0) > 0, warningCount: msg.warnings?.length || 0 }); downloadBlob(msg.amxdBytes!, filename); }}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />

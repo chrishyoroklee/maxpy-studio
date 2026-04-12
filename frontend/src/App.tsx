@@ -6,6 +6,7 @@ import { useAuth } from "./hooks/useAuth";
 import { useChat } from "./hooks/useChat";
 import { useEmbedded } from "./hooks/useEmbedded";
 import { usePyodide } from "./hooks/usePyodide";
+import { logEvent } from "./lib/firestore";
 import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
@@ -15,6 +16,15 @@ function App() {
   const embedded = useEmbedded();
   const { user, loading: authLoading, signIn, signUp, signInWithGoogle, logout, resetPassword, resendVerification, refreshUser, updateDisplayName, deleteAccount } = useAuth();
   const { ready, loading: pyodideLoading, error: pyodideError, runCode } = usePyodide();
+
+  // Log session_start once when user first authenticates (logEvent requires auth)
+  const sessionLogged = useRef(false);
+  useEffect(() => {
+    if (user && !sessionLogged.current) {
+      sessionLogged.current = true;
+      logEvent("session_start");
+    }
+  }, [user]);
 
   const [view, setView] = useState<View>("plugins");
   const [activePluginId, setActivePluginId] = useState<string | null>(null);
