@@ -2,6 +2,7 @@ import { AuthScreen } from "./components/AuthScreen";
 import { Chat } from "./components/Chat";
 import { Dashboard } from "./components/Dashboard";
 import { PluginList } from "./components/PluginList";
+import { AdminDashboard } from "./components/AdminDashboard";
 import { useAuth } from "./hooks/useAuth";
 import { useChat } from "./hooks/useChat";
 import { useEmbedded } from "./hooks/useEmbedded";
@@ -10,7 +11,9 @@ import { logEvent } from "./lib/firestore";
 import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
-type View = "plugins" | "workspace" | "settings";
+const ADMIN_UID = "PPnxvAX9yIbqGTWtUPWUmYXvKBm2";
+
+type View = "plugins" | "workspace" | "settings" | "admin";
 
 function App() {
   const embedded = useEmbedded();
@@ -137,6 +140,23 @@ function App() {
     );
   }
 
+  // Admin dashboard (only for admin user)
+  if (view === "admin" && user?.uid === ADMIN_UID) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <button className="back-button" onClick={backToPlugins}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+            Back
+          </button>
+        </header>
+        <main className="main-content">
+          <AdminDashboard />
+        </main>
+      </div>
+    );
+  }
+
   const initial = user ? (user.displayName || user.email || "?")[0].toUpperCase() : "";
 
   // Plugin list view (home)
@@ -158,6 +178,7 @@ function App() {
                 {showMenu && (
                   <div className="header-dropdown">
                     <button onClick={() => { setView("settings"); setShowMenu(false); }}>Settings</button>
+                    {user?.uid === ADMIN_UID && <button onClick={() => { setView("admin"); setShowMenu(false); }}>Admin</button>}
                     <button onClick={() => { logout(); setShowMenu(false); }}>Sign Out</button>
                   </div>
                 )}
@@ -209,6 +230,7 @@ function App() {
                   <div className="header-dropdown">
                     <button onClick={() => { setView("plugins"); setShowMenu(false); }}>My Plugins</button>
                     <button onClick={() => { setView("settings"); setShowMenu(false); }}>Settings</button>
+                    {user?.uid === ADMIN_UID && <button onClick={() => { setView("admin"); setShowMenu(false); }}>Admin</button>}
                     <button onClick={() => { logout(); setShowMenu(false); }}>Sign Out</button>
                   </div>
                 )}

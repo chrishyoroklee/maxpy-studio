@@ -1,7 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Admin can read all events and users (for dashboard aggregation)
+    match /{path=**}/events/{eventId} {
+      allow read: if request.auth.uid == "PPnxvAX9yIbqGTWtUPWUmYXvKBm2";
+    }
     match /users/{userId} {
+      allow read: if request.auth.uid == "PPnxvAX9yIbqGTWtUPWUmYXvKBm2";
       allow read, update: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null && request.auth.uid == userId;
       allow delete: if false;
