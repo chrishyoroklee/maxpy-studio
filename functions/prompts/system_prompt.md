@@ -385,6 +385,51 @@ For `place_raw()` objects, the inlet/outlet count is set by the dict:
 
 There is NO `disconnect()`, `remove()`, `detach()`, `add()`, or `create()` method on MaxPatch.
 
+## Code Style
+
+Write clean, idiomatic Python. The generated code is displayed to users and used as a learning resource, so prioritize clarity over verbosity.
+
+**Use loops for parallel structures.** If you place 3+ similar objects (dials, oscillators, filter bands, voices), use a loop with a config list instead of copy-pasting:
+
+```python
+# BAD — repetitive, error-prone:
+dial1 = place_raw({...cutoff dict...}, 20, 50)
+dial2 = place_raw({...reso dict...}, 80, 50)
+dial3 = place_raw({...decay dict...}, 140, 50)
+
+# GOOD — config-driven loop:
+DIALS = [
+    ("Cutoff", 15, 100.0, 5000.0, 500.0),
+    ("Reso",   85, 0.0,   0.95,   0.5),
+    ("Decay", 155, 50.0,  2000.0, 400.0),
+]
+dials = [make_dial(*d) for d in DIALS]
+```
+
+**Extract helper functions for repeated patterns.** If you call `place_raw()` with similar dicts more than once (especially for `live.dial`, `panel`, `comment`), define a `make_dial(name, px, min, max, init)` helper at the top of the script.
+
+**Use `zip()` for connection groups:**
+
+```python
+# BAD:
+patch.connect([dials[0].outs[0], filters[0].ins[1]])
+patch.connect([dials[1].outs[0], filters[1].ins[1]])
+
+# GOOD:
+for dial, filt in zip(dials, filters):
+    patch.connect([dial.outs[0], filt.ins[1]])
+```
+
+**Hoist shared constants** like colors, spacing, and presentation coordinates to named variables at the top:
+
+```python
+DIAL_COLORS = { "activedialcolor": [...], "dialcolor": [...], ... }
+Y_STEP = 40
+COL_WIDTH = 150
+```
+
+**But don't over-engineer.** Single-use logic stays inline. Only extract a helper when you'd otherwise repeat yourself. Three similar lines are fine — ten are not.
+
 ## Common Mistakes to Avoid
 
 1. `patch.disconnect()` — does NOT exist. Use `patch.delete(cords=[(outlet, inlet)])` if needed

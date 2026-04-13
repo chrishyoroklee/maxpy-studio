@@ -129,62 +129,32 @@ DIAL_COLORS = {
     "textcolor": [0.7, 1.0, 0.98, 1.0],             # ice white text
 }
 
-dial_rate = place_raw({
-    "box": {
-        "maxclass": "live.dial",
-        "varname": "rate",
-        "text": "live.dial",
-        "numinlets": 1,
-        "numoutlets": 2,
-        "outlettype": ["", "float"],
-        "patching_rect": [430.0, 60.0, 44.0, 48.0],
-        "presentation": 1,
-        "presentation_rect": [15.0, 30.0, 44.0, 48.0],
-        "parameter_enable": 1,
-        **DIAL_COLORS,
-        "saved_attribute_attributes": {
-            "valueof": {
-                "parameter_longname": "Rate",
-                "parameter_shortname": "Rate",
-                "parameter_type": 0,
-                "parameter_mmin": 0.1,
-                "parameter_mmax": 20.0,
-                "parameter_initial_enable": 1,
-                "parameter_initial": [4.0],
-                "parameter_unitstyle": 1,
-                "parameter_exponent": 2.0
+def make_dial(name, px, min_v, max_v, init, exponent=1.0):
+    """Create a live.dial at presentation x=px."""
+    return place_raw({
+        "box": {
+            "maxclass": "live.dial", "varname": name.lower(),
+            "text": "live.dial",
+            "numinlets": 1, "numoutlets": 2, "outlettype": ["", "float"],
+            "patching_rect": [430.0 + (px - 15), 60.0, 44.0, 48.0],
+            "presentation": 1,
+            "presentation_rect": [float(px), 30.0, 44.0, 48.0],
+            "parameter_enable": 1, **DIAL_COLORS,
+            "saved_attribute_attributes": {
+                "valueof": {
+                    "parameter_longname": name, "parameter_shortname": name[:4],
+                    "parameter_type": 0,
+                    "parameter_mmin": min_v, "parameter_mmax": max_v,
+                    "parameter_initial_enable": 1, "parameter_initial": [init],
+                    "parameter_unitstyle": 1, "parameter_exponent": exponent,
+                }
             }
         }
-    }
-}, 430, 60)
+    }, int(430 + (px - 15)), 60)
 
-dial_depth = place_raw({
-    "box": {
-        "maxclass": "live.dial",
-        "varname": "depth",
-        "text": "live.dial",
-        "numinlets": 1,
-        "numoutlets": 2,
-        "outlettype": ["", "float"],
-        "patching_rect": [500.0, 60.0, 44.0, 48.0],
-        "presentation": 1,
-        "presentation_rect": [70.0, 30.0, 44.0, 48.0],
-        "parameter_enable": 1,
-        **DIAL_COLORS,
-        "saved_attribute_attributes": {
-            "valueof": {
-                "parameter_longname": "Depth",
-                "parameter_shortname": "Depth",
-                "parameter_type": 0,
-                "parameter_mmin": 0.0,
-                "parameter_mmax": 1.0,
-                "parameter_initial_enable": 1,
-                "parameter_initial": [1.0],
-                "parameter_unitstyle": 1
-            }
-        }
-    }
-}, 500, 60)
+
+dial_rate = make_dial("Rate", 15, 0.1, 20.0, 4.0, exponent=2.0)
+dial_depth = make_dial("Depth", 70, 0.0, 1.0, 1.0)
 
 # Rate → LFO frequency, Depth → depth scaler
 patch.connect(
