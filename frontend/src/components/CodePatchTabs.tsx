@@ -118,6 +118,8 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
   }, [activeTab, code]);
 
   const hasPatch = patchData && patchData.nodes.length > 0;
+  // Stable key forces PatchGraph remount when patch data changes (resets drag positions)
+  const patchKey = hasPatch ? patchData.nodes.map(n => n.id).join(",") : "";
 
   const errorCount = warnings?.filter((w) => w.severity === "error").length ?? 0;
   const warningCount = warnings?.filter((w) => w.severity === "warning").length ?? 0;
@@ -241,7 +243,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
           {activeTab === "patch" && (
             hasPatch ? (
               <div className="patch-graph-container" onClick={() => { setFullscreen(true); fullscreenOpenTime.current = Date.now(); logEvent("graph_fullscreen_open"); }} style={{ cursor: "pointer" }}>
-                <PatchGraph nodes={patchData.nodes} edges={patchData.edges} />
+                <PatchGraph key={patchKey} nodes={patchData.nodes} edges={patchData.edges} />
               </div>
             ) : (
               <div className="patch-placeholder">
@@ -281,7 +283,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-          <PatchGraph key="fullscreen" nodes={patchData.nodes} edges={patchData.edges} />
+          <PatchGraph key={`fs-${patchKey}`} nodes={patchData.nodes} edges={patchData.edges} />
         </div>,
         document.body
       )}
