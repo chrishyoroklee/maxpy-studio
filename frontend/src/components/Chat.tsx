@@ -160,20 +160,6 @@ function SuggestionRow({
     dragStateRef.current = null;
   };
 
-  const ChevronSvg = ({ flipped }: { flipped?: boolean }) => (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={flipped ? { transform: "scaleX(-1)" } : undefined}
-    >
-      <polyline points="9 6 15 12 9 18" />
-    </svg>
-  );
-
   return (
     <div className="suggestion-section">
       <div className="suggestion-section-title">{title}</div>
@@ -190,7 +176,17 @@ function SuggestionRow({
           onPointerCancel={endDrag}
           onClick={() => handleArrowClick(-1)}
         >
-          <ChevronSvg flipped />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ transform: "scaleX(-1)" }}
+          >
+            <polyline points="9 6 15 12 9 18" />
+          </svg>
         </button>
         <div className="suggestions" ref={scrollRef}>
           {items.map((s) => (
@@ -217,7 +213,16 @@ function SuggestionRow({
           onPointerCancel={endDrag}
           onClick={() => handleArrowClick(1)}
         >
-          <ChevronSvg />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="9 6 15 12 9 18" />
+          </svg>
         </button>
       </div>
     </div>
