@@ -2,7 +2,7 @@
  * PatchGraph.tsx
  *
  * Renders a Max/MSP-style node graph using React Flow.
- * Read-only viewer: no dragging, no connecting -- just zoom/pan/select.
+ * Nodes are draggable for visual rearrangement. No connecting yet.
  */
 
 import {
@@ -12,12 +12,14 @@ import {
   MiniMap,
   Handle,
   Position,
+  applyNodeChanges,
   type NodeProps,
   type Node,
   type Edge,
+  type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import type { PatchNode, PatchEdge, PatchNodeData } from "../lib/patchGraphParser";
 import { logEvent } from "../lib/firestore";
 import "./PatchGraph.css";
@@ -156,15 +158,15 @@ export function PatchGraph({ nodes, edges }: PatchGraphProps) {
     [edges]
   );
 
-  const rfNodes: Node[] = useMemo(
-    () =>
-      nodes.map((n) => ({
-        id: n.id,
-        type: n.type,
-        position: n.position,
-        data: n.data,
-      })),
-    [nodes]
+  // Nodes are stateful so they can be dragged. Parent uses a `key` prop to
+  // force remount when patch data changes, so we only need the initializer.
+  const [rfNodes, setRfNodes] = useState<Node[]>(() =>
+    nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data }))
+  );
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => setRfNodes((nds) => applyNodeChanges(changes, nds)),
+    []
   );
 
   return (
@@ -175,7 +177,8 @@ export function PatchGraph({ nodes, edges }: PatchGraphProps) {
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
-        nodesDraggable={false}
+        onNodesChange={onNodesChange}
+        nodesDraggable={true}
         nodesConnectable={false}
         elementsSelectable={true}
         panOnDrag
