@@ -432,6 +432,62 @@ textarea:focus-visible {
 .suggestion-card:nth-child(3) { animation: fadeUp 0.5s var(--ease-out) 0.36s both; }
 .suggestion-card:nth-child(4) { animation: fadeUp 0.5s var(--ease-out) 0.44s both; }
 
+.suggestion-row-wrap {
+  position: relative;
+  max-width: 700px;
+  width: 100%;
+}
+
+.suggestion-row-wrap > .suggestions {
+  margin: 0 44px;
+  width: auto;
+  max-width: none;
+}
+
+.suggestion-scroll-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  z-index: 2;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease-out), background 0.2s var(--ease-out),
+              border-color 0.2s var(--ease-out);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  touch-action: none;
+}
+
+.suggestion-scroll-arrow[data-visible="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.suggestion-scroll-arrow.left { left: 0; }
+.suggestion-scroll-arrow.right { right: 0; }
+
+.suggestion-scroll-arrow:hover {
+  border-color: var(--border-accent);
+  background: var(--bg-surface);
+}
+
+.suggestion-scroll-arrow:active { cursor: grabbing; }
+
+.suggestion-scroll-arrow svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* ==================== Messages ==================== */
 
 .message {

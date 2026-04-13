@@ -67,6 +67,168 @@ const SUGGESTION_SECTIONS = [
   { title: "Virtual Instruments", items: VIRTUAL_INSTRUMENTS },
 ];
 
+type SuggestionItem = { label: string; desc: string; prompt: string; template: string };
+
+const DRAG_SCROLL_MULTIPLIER = 2.5;
+const DRAG_CLICK_THRESHOLD = 4;
+
+function SuggestionRow({
+  title,
+  items,
+  disabled,
+  onSelect,
+}: {
+  title: string;
+  items: SuggestionItem[];
+  disabled: boolean;
+  onSelect: (template: string, label: string) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const dragStateRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startScrollLeft: number;
+    moved: number;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+
+  const updateScrollState = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 1);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    window.addEventListener("resize", updateScrollState);
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+      ro.disconnect();
+    };
+  }, []);
+
+  const handleArrowClick = (direction: -1 | 1) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    const el = scrollRef.current;
+    if (!el) return;
+    logEvent("suggestion_scroll_click", { direction, section: title });
+    el.scrollBy({ left: direction * el.clientWidth * 0.8, behavior: "smooth" });
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStateRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startScrollLeft: el.scrollLeft,
+      moved: 0,
+    };
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const state = dragStateRef.current;
+    const el = scrollRef.current;
+    if (!state || !el) return;
+    const dx = e.clientX - state.startX;
+    state.moved = Math.max(state.moved, Math.abs(dx));
+    el.scrollLeft = state.startScrollLeft + dx * DRAG_SCROLL_MULTIPLIER;
+  };
+
+  const endDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const state = dragStateRef.current;
+    if (!state) return;
+    if (e.currentTarget.hasPointerCapture(state.pointerId)) {
+      e.currentTarget.releasePointerCapture(state.pointerId);
+    }
+    if (state.moved > DRAG_CLICK_THRESHOLD) {
+      suppressClickRef.current = true;
+    }
+    dragStateRef.current = null;
+  };
+
+  return (
+    <div className="suggestion-section">
+      <div className="suggestion-section-title">{title}</div>
+      <div className="suggestion-row-wrap">
+        <button
+          type="button"
+          className="suggestion-scroll-arrow left"
+          data-visible={canScrollLeft}
+          aria-label={`Scroll ${title} left`}
+          tabIndex={canScrollLeft ? 0 : -1}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onClick={() => handleArrowClick(-1)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ transform: "scaleX(-1)" }}
+          >
+            <polyline points="9 6 15 12 9 18" />
+          </svg>
+        </button>
+        <div className="suggestions" ref={scrollRef}>
+          {items.map((s) => (
+            <button
+              key={s.label}
+              className="suggestion-card"
+              disabled={disabled}
+              onClick={() => onSelect(s.template, s.label)}
+            >
+              <span className="suggestion-label">{s.label}</span>
+              <span className="suggestion-desc">{s.desc}</span>
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="suggestion-scroll-arrow right"
+          data-visible={canScrollRight}
+          aria-label={`Scroll ${title} right`}
+          tabIndex={canScrollRight ? 0 : -1}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onClick={() => handleArrowClick(1)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="9 6 15 12 9 18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const MODELS = [
   { value: "claude-sonnet-4-20250514", label: "Sonnet 4" },
   { value: "claude-opus-4-20250514", label: "Opus 4" },
@@ -117,22 +279,13 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
             <h2>MaxPy Studio</h2>
             <p>Describe a plugin. Get an .amxd for Ableton.</p>
             {SUGGESTION_SECTIONS.map((section) => (
-              <div className="suggestion-section" key={section.title}>
-                <div className="suggestion-section-title">{section.title}</div>
-                <div className="suggestions">
-                  {section.items.map((s) => (
-                    <button
-                      key={s.label}
-                      className="suggestion-card"
-                      disabled={!pyodideReady || isLoading}
-                      onClick={() => handleTemplateClick(s.template, s.label)}
-                    >
-                      <span className="suggestion-label">{s.label}</span>
-                      <span className="suggestion-desc">{s.desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <SuggestionRow
+                key={section.title}
+                title={section.title}
+                items={section.items}
+                disabled={!pyodideReady || isLoading}
+                onSelect={handleTemplateClick}
+              />
             ))}
           </div>
         )}
