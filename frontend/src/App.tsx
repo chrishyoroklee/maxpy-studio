@@ -11,7 +11,12 @@ import { logEvent } from "./lib/firestore";
 import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
-const ADMIN_UID = "PPnxvAX9yIbqGTWtUPWUmYXvKBm2";
+const ADMIN_UIDS = new Set([
+  "PPnxvAX9yIbqGTWtUPWUmYXvKBm2",
+  "kU8Jm1Ubh1b4ikC9DQjY3ga0g4J2",
+  "QPOaRxnLdBZCmO9RENmhzdfmuzz1",
+  "94QSjmXHwEhrTHudkoimyJAsiJ43",
+]);
 
 type View = "plugins" | "workspace" | "settings" | "admin";
 
@@ -141,7 +146,7 @@ function App() {
   }
 
   // Admin dashboard (only for admin user)
-  if (view === "admin" && user?.uid === ADMIN_UID) {
+  if (view === "admin" && user?.uid && ADMIN_UIDS.has(user.uid)) {
     return (
       <div className="app">
         <header className="app-header">
@@ -178,7 +183,7 @@ function App() {
                 {showMenu && (
                   <div className="header-dropdown">
                     <button onClick={() => { setView("settings"); setShowMenu(false); }}>Settings</button>
-                    {user?.uid === ADMIN_UID && <button onClick={() => { setView("admin"); setShowMenu(false); }}>Admin</button>}
+                    {user?.uid && ADMIN_UIDS.has(user.uid) && <button onClick={() => { setView("admin"); setShowMenu(false); }}>Admin</button>}
                     <button onClick={() => { logout(); setShowMenu(false); }}>Sign Out</button>
                   </div>
                 )}
@@ -230,7 +235,7 @@ function App() {
                   <div className="header-dropdown">
                     <button onClick={() => { setView("plugins"); setShowMenu(false); }}>My Plugins</button>
                     <button onClick={() => { setView("settings"); setShowMenu(false); }}>Settings</button>
-                    {user?.uid === ADMIN_UID && <button onClick={() => { setView("admin"); setShowMenu(false); }}>Admin</button>}
+                    {user?.uid && ADMIN_UIDS.has(user.uid) && <button onClick={() => { setView("admin"); setShowMenu(false); }}>Admin</button>}
                     <button onClick={() => { logout(); setShowMenu(false); }}>Sign Out</button>
                   </div>
                 )}
