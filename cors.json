@@ -4,7 +4,9 @@
       "http://localhost:5173",
       "http://localhost:5174",
       "https://maxpy-studio.vercel.app",
-      "https://*.vercel.app"
+      "https://*.vercel.app",
+      "https://maxpystudio.com",
+      "https://www.maxpystudio.com"
     ],
     "method": ["GET", "HEAD", "PUT", "POST"],
     "maxAgeSeconds": 3600,

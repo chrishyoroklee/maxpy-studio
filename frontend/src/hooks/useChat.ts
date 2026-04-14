@@ -125,13 +125,23 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           }
         }
 
-        // Restore .amxd bytes + patch data for messages that have a storage path
+        // Restore .amxd bytes + patch data for messages that have a storage path.
+        // Deduplicate: multiple legacy messages may share the same path, so download
+        // each unique path once and apply to all messages that reference it.
+        const pathToIds = new Map<string, string[]>();
+        for (const d of docs) {
+          if (d.amxdStoragePath) {
+            const ids = pathToIds.get(d.amxdStoragePath) || [];
+            ids.push(d.id);
+            pathToIds.set(d.amxdStoragePath, ids);
+          }
+        }
+
         await Promise.all(
-          docs.map(async (d) => {
-            if (!d.amxdStoragePath) return;
+          Array.from(pathToIds.entries()).map(async ([path, ids]) => {
             if (aborted) return;
             try {
-              const bytes = await downloadAmxd(d.amxdStoragePath!);
+              const bytes = await downloadAmxd(path);
               if (aborted) return;
               let patchData: PatchGraph | undefined;
               try {
@@ -142,11 +152,11 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
               }
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === d.id ? { ...m, amxdBytes: bytes, patchData } : m
+                  ids.includes(m.id) ? { ...m, amxdBytes: bytes, patchData } : m
                 )
               );
             } catch {
-              // Download failed; leave message without patch data
+              // Download failed; leave messages without patch data
             }
           })
         );

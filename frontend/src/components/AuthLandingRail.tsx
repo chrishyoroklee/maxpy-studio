@@ -24,7 +24,7 @@ export function AuthLandingRail() {
       </a>
       <a
         className="auth-rail-item"
-        href="https://github.com/chrishyoroklee/maxpy-studio"
+        href="https://github.com/Barnard-PL-Labs/MaxPyLang"
         target="_blank"
         rel="noopener noreferrer"
         title="Repository"
