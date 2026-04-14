@@ -45,8 +45,7 @@ const DEMO_EDGES: PatchEdge[] = [
   },
 ];
 
-const STATIC_CODE = `# Illustrative output (static preview — no model call)
-import maxpylang as mp
+const STATIC_CODE = `import maxpylang as mp
 
 p = mp.MaxPatch()
 osc = p.place("cycle~ 440")[0]
