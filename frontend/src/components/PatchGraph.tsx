@@ -129,16 +129,23 @@ const nodeTypes = { maxObject: MaxObjectNode };
 interface PatchGraphProps {
   nodes: PatchNode[];
   edges: PatchEdge[];
+  /** Draw signal edges with a short path-reveal animation (e.g. landing demo). */
+  animatedEdges?: boolean;
+  className?: string;
+  /** Fired on first meaningful user interaction (pan/zoom/drag/click). */
+  onUserInteract?: () => void;
 }
 
-export function PatchGraph({ nodes, edges }: PatchGraphProps) {
+export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInteract }: PatchGraphProps) {
   const hasLoggedInteraction = useRef(false);
   const isInitialFit = useRef(true);
+  const hasNotifiedUser = useRef(false);
 
   // Reset when new patch data arrives
   useEffect(() => {
     hasLoggedInteraction.current = false;
     isInitialFit.current = true;
+    hasNotifiedUser.current = false;
     // Wait for fitView animation to settle before allowing interaction logging
     const t = setTimeout(() => { isInitialFit.current = false; }, 500);
     return () => clearTimeout(t);
@@ -169,8 +176,19 @@ export function PatchGraph({ nodes, edges }: PatchGraphProps) {
     []
   );
 
+  const notifyUserInteract = useCallback(() => {
+    if (!onUserInteract) return;
+    if (hasNotifiedUser.current) return;
+    hasNotifiedUser.current = true;
+    onUserInteract();
+  }, [onUserInteract]);
+
+  const rootClass = ["patch-graph", animatedEdges ? "patch-graph--animate-edges" : "", className || ""]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className="patch-graph">
+    <div className={rootClass}>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -186,14 +204,24 @@ export function PatchGraph({ nodes, edges }: PatchGraphProps) {
         minZoom={0.2}
         maxZoom={4}
         proOptions={{ hideAttribution: true }}
+        onMoveStart={() => {
+          if (isInitialFit.current) return;
+          notifyUserInteract();
+        }}
         onMoveEnd={() => {
           if (isInitialFit.current) return; // ignore fitView's auto-pan
+          notifyUserInteract();
           if (!hasLoggedInteraction.current) {
             hasLoggedInteraction.current = true;
             logEvent("graph_interact", { type: "zoom_pan" });
           }
         }}
+        onNodeDragStart={() => {
+          if (isInitialFit.current) return;
+          notifyUserInteract();
+        }}
         onNodeClick={() => {
+          notifyUserInteract();
           if (!hasLoggedInteraction.current) {
             hasLoggedInteraction.current = true;
             logEvent("graph_interact", { type: "node_click" });
