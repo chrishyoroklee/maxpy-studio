@@ -36,8 +36,16 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
   const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
-    // Ensure the landing always starts at the top (e.g. after navigating back from /auth-demo-section).
+    if ("scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
+    }
+    // Ensure the landing always starts at the top, even if a hash (e.g. #auth-account) is present.
+    if (window.location.hash) {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    // Some browsers apply hash scrolling after paint; re-assert scroll position.
+    window.setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }), 0);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,11 +92,12 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
 
   return (
     <div className="auth-screen">
+      <div id="auth-top" />
       <AuthLandingRail />
       <div className="auth-screen-body">
         <div className="auth-screen-noise" aria-hidden="true" />
         <div className="auth-m3-layout">
-        <div className="auth-m3-hero">
+          <div className="auth-m3-hero">
           <section className="auth-chunk auth-chunk--brand" aria-labelledby="auth-landing-title">
             <p className="auth-chunk-eyebrow">AI · Ableton · Max for Live</p>
             <h1 id="auth-landing-title" className="auth-chunk-title">
@@ -96,7 +105,7 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
               <span className="auth-chunk-title-studio"> Studio</span>
             </h1>
             <p className="auth-chunk-lede">
-              Generate Max for Live devices from text descriptions—Python in the browser, with a patch graph you can tweak.
+              Generate Max for Live plugins from text descriptions.
             </p>
             <a className="auth-chunk-cta" href="#auth-account">
               Get started
@@ -117,7 +126,7 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
               </div>
             </section>
           </div>
-        </div>
+          </div>
 
         <div className="auth-spotlight" id="auth-demo-section">
           <div className="auth-spotlight-intro">
@@ -178,7 +187,6 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   autoComplete="name"
-                  autoFocus={mode === "signup"}
                 />
               </div>
             )}
@@ -193,7 +201,6 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                autoFocus={mode !== "signup"}
               />
             </div>
 
