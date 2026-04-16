@@ -1535,27 +1535,35 @@ textarea:focus-visible {
 
 .auth-workflow-submit {
   flex-shrink: 0;
-  width: 52px;
-  border-radius: 16px;
-  border: 1px solid rgba(167, 139, 250, 0.45);
-  background: rgba(124, 58, 237, 0.3);
-  color: #f5f3ff;
+  width: 68px;
+  height: 68px;
+  border-radius: 12px;
+  border: 1px solid rgba(233, 213, 255, 0.72);
+  background: rgba(124, 58, 237, 0.92);
+  color: #ffffff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
+    transform var(--transition-fast),
     filter var(--transition-fast),
     opacity var(--transition-fast);
 }
 
 .auth-workflow-submit:hover:not(:disabled) {
   filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
 .auth-workflow-submit:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.auth-workflow-submit:focus-visible {
+  outline: 3px solid rgba(233, 213, 255, 0.9);
+  outline-offset: 2px;
 }
 
 .auth-workflow-spinner {
@@ -1833,15 +1841,15 @@ textarea:focus-visible {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .auth-chunk--brand,
-  .auth-hero-visual-sizer,
-  .auth-card {
+  .first-load .auth-chunk--brand,
+  .first-load .auth-hero-visual-sizer,
+  .first-load .auth-card {
     animation: fadeUp 0.55s var(--ease-out) both;
   }
-  .auth-hero-visual-sizer {
+  .first-load .auth-hero-visual-sizer {
     animation-delay: 0.06s;
   }
-  .auth-card {
+  .first-load .auth-card {
     animation-delay: 0.12s;
   }
 }
