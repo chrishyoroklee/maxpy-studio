@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 /** Non-empty string from Vite env, or dev-only placeholder so `initializeApp` never throws when `.env` is missing. */
 function envString(value: string | undefined, devFallback: string): string {
@@ -29,10 +30,12 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+export const functions = getFunctions(app, "us-central1");
 
 // Connect to emulators in local development (run `firebase emulators:start` from repo root)
 if (import.meta.env.DEV) {
   connectFirestoreEmulator(db, "127.0.0.1", 8181);
   connectStorageEmulator(storage, "127.0.0.1", 9199);
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  connectFunctionsEmulator(functions, "127.0.0.1", 5055);
 }
