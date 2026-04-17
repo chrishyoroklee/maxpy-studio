@@ -761,6 +761,89 @@ textarea:focus-visible {
   max-width: 720px;
   margin: 0 auto;
   width: 100%;
+  position: relative;
+}
+
+.templates-popover {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(100% - 8px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 14px 14px 4px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(134, 59, 255, 0.08);
+  z-index: 10;
+  animation: fadeUp 0.2s var(--ease-out) both;
+}
+
+.templates-popover .suggestion-section {
+  max-width: none;
+  margin-bottom: 14px;
+  animation: none;
+}
+
+.templates-popover .suggestion-row-wrap {
+  max-width: none;
+}
+
+.templates-popover .suggestions {
+  max-width: none;
+}
+
+.templates-popover .suggestion-card {
+  animation: none;
+}
+
+.templates-button {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  margin-bottom: 2px;
+  border-radius: 16px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease-out), color 0.2s var(--ease-out),
+              background 0.2s var(--ease-out);
+}
+
+.templates-button:hover:not(:disabled) {
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+.templates-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.templates-button[aria-expanded="true"] {
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+.templates-button svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 520px) {
+  .templates-button span {
+    display: none;
+  }
+  .templates-button {
+    padding: 0 9px;
+  }
 }
 
 .input-wrapper {
