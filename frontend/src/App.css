@@ -1733,21 +1733,21 @@ textarea:focus-visible {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(10, 10, 16, 0.35);
-  min-height: 200px;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  height: clamp(320px, 55vh, 440px);
 }
 
 .auth-workflow-split--idle {
-  min-height: 320px;
+  height: clamp(320px, 55vh, 440px);
 }
 
 .auth-workflow-split--running {
-  min-height: 220px;
+  height: clamp(260px, 45vh, 360px);
 }
 
 .auth-workflow-split--done {
-  min-height: 320px;
+  height: clamp(320px, 55vh, 440px);
 }
 
 .auth-workflow-status {
@@ -1786,8 +1786,8 @@ textarea:focus-visible {
 }
 
 .auth-workflow-graph {
-  height: 400px;
-  min-height: 320px;
+  height: 100%;
+  min-height: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   position: relative;
 }
@@ -1801,7 +1801,9 @@ textarea:focus-visible {
 }
 
 .auth-workflow-code-panel {
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   background: rgba(10, 10, 16, 0.24);
   padding: 18px 18px;
 }

@@ -56,8 +56,8 @@ p.save("preview.maxpat")`;
 const CODE_LINES = STATIC_CODE.split("\n");
 
 /** Spinner → graph: quick. Code reveal after graph: slower (“actual build” on the page). */
-const DEMO_RUN_MS = 900;
-const DEMO_CODE_LINE_MS = 320;
+const DEMO_RUN_MS = 650;
+const DEMO_CODE_LINE_MS = 55;
 
 type Phase = "idle" | "running" | "done";
 
