@@ -1799,6 +1799,18 @@ textarea:focus-visible {
   margin-top: 12px;
 }
 
+.auth-workflow-amxd {
+  margin-top: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  box-shadow: none;
+  text-decoration: none;
+}
+
+.auth-workflow-amxd:hover {
+  box-shadow: none;
+}
+
 .auth-workflow-replay {
   font-size: 12px;
   font-weight: 600;

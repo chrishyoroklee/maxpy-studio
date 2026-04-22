@@ -2,16 +2,28 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { PatchGraph } from "./PatchGraph";
 import type { PatchEdge, PatchNode } from "../lib/patchGraphParser";
 
-const SAMPLE_PROMPT =
-  "Create me a simple Max for Live device: a sine oscillator at 440 Hz into the main outputs, with a live gain slider.";
+const SAMPLE_PROMPT = "Make a tremolo audio effect with a knob for overdrive/distortion.";
 
 const DEMO_NODES: PatchNode[] = [
   {
-    id: "osc",
+    id: "in",
     type: "maxObject",
-    position: { x: 40, y: 100 },
+    position: { x: 40, y: 120 },
     data: {
-      text: "cycle~ 440",
+      text: "plugin~",
+      maxclass: "newobj",
+      numinlets: 2,
+      numoutlets: 2,
+      outlettype: ["signal", "signal"],
+      isSignal: true,
+    },
+  },
+  {
+    id: "lfo",
+    type: "maxObject",
+    position: { x: 40, y: 32 },
+    data: {
+      text: "cycle~ rate",
       maxclass: "newobj",
       numinlets: 2,
       numoutlets: 1,
@@ -20,11 +32,37 @@ const DEMO_NODES: PatchNode[] = [
     },
   },
   {
-    id: "dac",
+    id: "vca",
     type: "maxObject",
-    position: { x: 280, y: 100 },
+    position: { x: 260, y: 120 },
     data: {
-      text: "ezdac~",
+      text: "*~ (tremolo)",
+      maxclass: "newobj",
+      numinlets: 2,
+      numoutlets: 1,
+      outlettype: ["signal"],
+      isSignal: true,
+    },
+  },
+  {
+    id: "drive",
+    type: "maxObject",
+    position: { x: 470, y: 120 },
+    data: {
+      text: "clip~ / drive",
+      maxclass: "newobj",
+      numinlets: 1,
+      numoutlets: 1,
+      outlettype: ["signal"],
+      isSignal: true,
+    },
+  },
+  {
+    id: "out",
+    type: "maxObject",
+    position: { x: 640, y: 120 },
+    data: {
+      text: "plugout~",
       maxclass: "newobj",
       numinlets: 2,
       numoutlets: 0,
@@ -36,22 +74,86 @@ const DEMO_NODES: PatchNode[] = [
 
 const DEMO_EDGES: PatchEdge[] = [
   {
-    id: "e-osc-dac",
-    source: "osc",
-    target: "dac",
+    id: "e-in-vca",
+    source: "in",
+    target: "vca",
+    sourceHandle: "0",
+    targetHandle: "0",
+    data: { isSignal: true },
+  },
+  {
+    id: "e-lfo-vca",
+    source: "lfo",
+    target: "vca",
+    sourceHandle: "0",
+    targetHandle: "1",
+    data: { isSignal: true },
+  },
+  {
+    id: "e-vca-drive",
+    source: "vca",
+    target: "drive",
+    sourceHandle: "0",
+    targetHandle: "0",
+    data: { isSignal: true },
+  },
+  {
+    id: "e-drive-out",
+    source: "drive",
+    target: "out",
     sourceHandle: "0",
     targetHandle: "0",
     data: { isSignal: true },
   },
 ];
 
-const STATIC_CODE = `import maxpylang as mp
+const STATIC_CODE = `import json
+import maxpylang as mp
+from maxpylang.maxobject import MaxObject
 
-p = mp.MaxPatch()
-osc = p.place("cycle~ 440")[0]
-dac = p.place("ezdac~")[0]
-p.connect([osc.outs[0], dac.ins[0]])
-p.save("preview.maxpat")`;
+patch = mp.MaxPatch()
+
+def place_raw(obj_dict, x, y):
+    obj = MaxObject(obj_dict, from_dict=True)
+    patch.set_position(x, y)
+    patch.place_obj(obj, position=[float(x), float(y)])
+    return obj
+
+# Audio input (stereo) → sum to mono
+plugin = place_raw({"box": {"maxclass": "newobj", "text": "plugin~", "numinlets": 2, "numoutlets": 2, "outlettype": ["signal","signal"], "patching_rect": [30.0, 65.0, 46.0, 22.0]}}, 30, 65)
+sum_stereo = patch.place("+~")[0]
+norm = patch.place("*~ 0.5")[0]
+patch.connect([plugin.outs[0], sum_stereo.ins[0]],[plugin.outs[1], sum_stereo.ins[1]],[sum_stereo.outs[0], norm.ins[0]])
+
+# Tremolo LFO (Rate) + Depth scaling
+lfo = patch.place("cycle~ 4")[0]
+lfo_scale = patch.place("*~ 0.5")[0]
+lfo_offset = patch.place("+~ 0.5")[0]
+depth_scale = patch.place("*~")[0]
+modulator = patch.place("+~ 1.")[0]
+
+# VCA: audio * modulator
+tremolo_vca = patch.place("*~")[0]
+
+# Overdrive: gain + multi-stage clipping
+pre_gain = patch.place("*~")[0]
+clip1 = patch.place("clip~ -0.7 0.7")[0]
+post_gain = patch.place("*~ 2.5")[0]
+clip2 = patch.place("clip~ -0.9 0.9")[0]
+makeup = patch.place("*~ 0.6")[0]
+
+# Output
+final_clip = patch.place("clip~ -1. 1.")[0]
+plugout = patch.place("plugout~")[0]
+
+patcher_json = patch.get_json()
+patcher_json["patcher"]["openinpresentation"] = 1
+json.dump(patcher_json, open("/output/device.maxpat","w"), indent=2)
+print("Saved: device.maxpat")
+
+from amxd import save_amxd
+save_amxd(patcher_json, "/output/device.amxd", device_type="audio_effect")
+print("Saved: device.amxd")`;
 
 const CODE_LINES = STATIC_CODE.split("\n");
 
@@ -268,6 +370,9 @@ export function AuthWorkflowDemo() {
           <button type="button" className="auth-workflow-replay" onClick={replay}>
             Replay
           </button>
+          <a className="download-button auth-workflow-amxd" href="/templates/tremolo-w-overdrive.amxd" download>
+            Download Ableton test device (.amxd)
+          </a>
           <span className="auth-workflow-hint">Cable animates on load; code types out (reduced-motion: instant).</span>
         </div>
       )}
