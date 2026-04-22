@@ -1618,6 +1618,7 @@ textarea:focus-visible {
 }
 
 .auth-workflow-prompt-wrap {
+  position: relative;
   display: flex;
   gap: 10px;
   align-items: stretch;
@@ -1625,42 +1626,81 @@ textarea:focus-visible {
 
 .auth-workflow-prompt {
   flex: 1;
-  min-height: 72px;
-  padding: 12px 14px;
+  min-height: 84px;
+  padding: 12px 14px 12px 14px;
+  padding-right: clamp(92px, 12vw, 112px);
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(10, 10, 16, 0.55);
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.92);
   font-family: var(--font-body);
   font-size: clamp(14px, 1.35vw, 16px);
   line-height: 1.5;
   resize: none;
   cursor: default;
+  user-select: none;
 }
 
 .auth-workflow-submit {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
   flex-shrink: 0;
-  width: 52px;
-  border-radius: 16px;
-  border: 1px solid rgba(167, 139, 250, 0.45);
-  background: rgba(124, 58, 237, 0.3);
-  color: #f5f3ff;
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  border: none;
+  background: #cfc7ff;
+  color: rgba(30, 27, 46, 0.92);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
+    transform var(--transition-fast),
     filter var(--transition-fast),
     opacity var(--transition-fast);
+  z-index: 2;
 }
 
 .auth-workflow-submit:hover:not(:disabled) {
-  filter: brightness(1.08);
+  filter: brightness(1.04) saturate(1.05);
+  transform: translateY(calc(-50% - 1px));
 }
 
 .auth-workflow-submit:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+  transform: translateY(-50%);
+  animation: none;
+}
+
+.auth-workflow-submit:focus-visible {
+  outline: 3px solid rgba(233, 213, 255, 0.9);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .auth-workflow-submit:not(:disabled) {
+    animation: authSendPulse 1.35s ease-in-out infinite;
+  }
+
+  .auth-workflow-submit:hover:not(:disabled) {
+    animation: none;
+  }
+}
+
+@keyframes authSendPulse {
+  0%,
+  100% {
+    transform: translateY(-50%) scale(1);
+    filter: brightness(1) saturate(1);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.05);
+    filter: brightness(1.06) saturate(1.08);
+  }
 }
 
 .auth-workflow-spinner {
@@ -1712,7 +1752,7 @@ textarea:focus-visible {
   font-size: clamp(15px, 1.8vw, 19px);
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: rgba(245, 243, 255, 0.92);
+  color: #ffffff;
 }
 
 .auth-workflow-running-dot {
@@ -1766,7 +1806,7 @@ textarea:focus-visible {
   font-family: var(--font-mono);
   font-size: 12.5px;
   line-height: 1.65;
-  color: #c8c8dc;
+  color: rgba(255, 255, 255, 0.92);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -1938,15 +1978,15 @@ textarea:focus-visible {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .auth-chunk--brand,
-  .auth-hero-visual-sizer,
-  .auth-card {
+  .first-load .auth-chunk--brand,
+  .first-load .auth-hero-visual-sizer,
+  .first-load .auth-card {
     animation: fadeUp 0.55s var(--ease-out) both;
   }
-  .auth-hero-visual-sizer {
+  .first-load .auth-hero-visual-sizer {
     animation-delay: 0.06s;
   }
-  .auth-card {
+  .first-load .auth-card {
     animation-delay: 0.12s;
   }
 }

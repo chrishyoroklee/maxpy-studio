@@ -164,6 +164,8 @@ export function AuthWorkflowDemo() {
             rows={2}
             value={SAMPLE_PROMPT}
             aria-readonly="true"
+            tabIndex={-1}
+            style={{ pointerEvents: "none" }}
           />
           <button
             type="button"
@@ -175,11 +177,11 @@ export function AuthWorkflowDemo() {
             {phase === "running" ? (
               <span className="auth-workflow-spinner" aria-hidden="true" />
             ) : (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
                   d="M5 12h14M13 5l7 7-7 7"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="2.8"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
