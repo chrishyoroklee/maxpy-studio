@@ -29,3 +29,4 @@ generated/
 firestore-debug.log
 ui-debug.log
 .superpowers/
+.vercel

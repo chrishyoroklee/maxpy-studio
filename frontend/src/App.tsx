@@ -8,15 +8,9 @@ import { useChat } from "./hooks/useChat";
 import { useEmbedded } from "./hooks/useEmbedded";
 import { usePyodide } from "./hooks/usePyodide";
 import { logEvent } from "./lib/firestore";
+import { ADMIN_UIDS } from "./lib/admins";
 import { useState, useRef, useEffect } from "react";
 import "./App.css";
-
-const ADMIN_UIDS = new Set([
-  "PPnxvAX9yIbqGTWtUPWUmYXvKBm2",
-  "kU8Jm1Ubh1b4ikC9DQjY3ga0g4J2",
-  "QPOaRxnLdBZCmO9RENmhzdfmuzz1",
-  "94QSjmXHwEhrTHudkoimyJAsiJ43",
-]);
 
 type View = "plugins" | "workspace" | "settings" | "admin";
 
