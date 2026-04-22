@@ -1563,6 +1563,33 @@ textarea:focus-visible {
   margin: 0 0 10px;
 }
 
+.auth-spotlight-intro--wide {
+  max-width: 72ch;
+}
+
+.auth-spotlight-steps {
+  list-style: none;
+  counter-reset: step;
+  padding: 0;
+  margin: 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-spotlight-steps li {
+  counter-increment: step;
+  font-size: clamp(16px, 1.75vw, 20px);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.auth-spotlight-steps li::before {
+  content: counter(step) ". ";
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .auth-spotlight-lede {
   font-size: clamp(16px, 1.75vw, 20px);
   line-height: 1.6;
@@ -1632,6 +1659,7 @@ textarea:focus-visible {
   display: flex;
   gap: 10px;
   align-items: stretch;
+  max-width: 60%;
 }
 
 .auth-workflow-prompt {
@@ -1735,19 +1763,20 @@ textarea:focus-visible {
   background: rgba(10, 10, 16, 0.35);
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  height: clamp(320px, 55vh, 440px);
+  height: clamp(380px, 62vh, 520px);
 }
 
 .auth-workflow-split--idle {
-  height: clamp(320px, 55vh, 440px);
+  height: clamp(380px, 62vh, 520px);
 }
 
 .auth-workflow-split--running {
-  height: clamp(260px, 45vh, 360px);
+  /* Keep panel height stable to avoid layout "jump" during the spinner → graph transition */
+  height: clamp(380px, 62vh, 520px);
 }
 
 .auth-workflow-split--done {
-  height: clamp(320px, 55vh, 440px);
+  height: clamp(380px, 62vh, 520px);
 }
 
 .auth-workflow-status {
@@ -1792,6 +1821,31 @@ textarea:focus-visible {
   position: relative;
 }
 
+.auth-workflow-graph-live,
+.auth-workflow-panel-empty {
+  position: absolute;
+  inset: 0;
+  transition: opacity 220ms var(--ease-out);
+}
+
+.auth-workflow-graph-live {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.auth-workflow-split--done .auth-workflow-graph-live {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.auth-workflow-panel-empty {
+  opacity: 1;
+}
+
+.auth-workflow-split--done .auth-workflow-panel-empty {
+  opacity: 0;
+}
+
 .auth-workflow-graph .patch-graph {
   border-radius: 0;
 }
@@ -1830,22 +1884,22 @@ textarea:focus-visible {
   width: min(320px, calc(100% - 24px));
   border-radius: 14px;
   padding: 10px 12px 12px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  background: rgba(15, 15, 24, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.92);
   user-select: none;
   z-index: 2;
 }
 
 .auth-workflow-tip-header {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.78);
   margin-bottom: 6px;
   cursor: grab;
 }
@@ -1855,15 +1909,15 @@ textarea:focus-visible {
 }
 
 .auth-workflow-tip-body {
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.45;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.92);
   padding-right: 18px;
 }
 
 .auth-workflow-tip-subtle {
   display: inline;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.64);
 }
 
 .auth-workflow-tip-close {
@@ -1955,6 +2009,21 @@ textarea:focus-visible {
 }
 
 @media (max-width: 800px) {
+  .auth-workflow-prompt-wrap {
+    max-width: 100%;
+  }
+
+  .auth-workflow-prompt {
+    font-size: 14px;
+    padding-right: 72px;
+    min-height: 96px;
+  }
+
+  .auth-workflow-submit {
+    width: 56px;
+    height: 56px;
+  }
+
   .auth-workflow-split--done {
     grid-template-columns: 1fr;
   }

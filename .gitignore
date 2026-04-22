@@ -20,6 +20,7 @@ firebase-service-account.json
 generated/
 *.maxpat
 *.amxd
+!frontend/public/templates/*.amxd
 
 # IDE
 .vscode/
