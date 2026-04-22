@@ -133,7 +133,7 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
             <h2 className="auth-spotlight-heading">Try the flow</h2>
             <p className="auth-spotlight-lede">
               Send a prompt to generate a patch graph and Python output. Then drag nodes to rearrange and explore the
-              structure.
+              structure. Download the .amxd file and drag it onto a MIDI track in Ableton Live to try it out.
             </p>
           </div>
 

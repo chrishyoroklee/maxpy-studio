@@ -94,11 +94,11 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       return;
     }
 
+    let aborted = false;
     setHistoryLoaded(false);
     Promise.all([loadMessages(pluginId), loadPlugin(pluginId)])
       .then(async ([docs, plugin]) => {
-        console.log("[useChat] Loaded plugin:", plugin);
-        console.log("[useChat] Loaded messages:", docs);
+        if (aborted) return;
         templateUsedRef.current = plugin?.templateUsed ?? null;
         const loaded: ChatMessage[] = docs.map((d) => ({
           id: d.id,
@@ -113,54 +113,60 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
         }));
         setMessages(loaded);
 
-        // Fallback: if the latest assistant message with code lacks amxdStoragePath,
-        // use the plugin's current amxdStoragePath (for messages saved before the fix)
+        // Fallback: for assistant messages with code that lack amxdStoragePath,
+        // use the plugin's current amxdStoragePath (for messages saved before per-message paths)
         if (plugin?.amxdStoragePath) {
           for (let i = docs.length - 1; i >= 0; i--) {
             const d = docs[i];
             if (d.role === "assistant" && d.code && !d.amxdStoragePath) {
-              console.log("[useChat] Fallback: using plugin storage path for message", d.id);
               d.amxdStoragePath = plugin.amxdStoragePath;
-              break;
+              // Don't break — patch all legacy messages so every turn gets patch data
             }
           }
-        } else {
-          console.warn("[useChat] No amxdStoragePath on plugin doc");
         }
 
-        // Restore .amxd bytes + patch data for messages that have a storage path
+        // Restore .amxd bytes + patch data for messages that have a storage path.
+        // Deduplicate: multiple legacy messages may share the same path, so download
+        // each unique path once and apply to all messages that reference it.
+        const pathToIds = new Map<string, string[]>();
+        for (const d of docs) {
+          if (d.amxdStoragePath) {
+            const ids = pathToIds.get(d.amxdStoragePath) || [];
+            ids.push(d.id);
+            pathToIds.set(d.amxdStoragePath, ids);
+          }
+        }
+
         await Promise.all(
-          docs.map(async (d, i) => {
-            if (!d.amxdStoragePath) {
-              console.log("[useChat] No storage path for message", i, d.id);
-              return;
-            }
+          Array.from(pathToIds.entries()).map(async ([path, ids]) => {
+            if (aborted) return;
             try {
-              console.log("[useChat] Downloading .amxd from", d.amxdStoragePath);
-              const bytes = await downloadAmxd(d.amxdStoragePath);
-              console.log("[useChat] Downloaded", bytes.length, "bytes");
+              const bytes = await downloadAmxd(path);
+              if (aborted) return;
               let patchData: PatchGraph | undefined;
               try {
                 const maxpat = extractMaxpat(bytes);
                 patchData = parsePatchGraph(maxpat);
-              } catch (err) {
-                console.warn("[useChat] Failed to extract patch:", err);
+              } catch {
+                // Patch viz is non-critical; skip if extraction fails
               }
-              setMessages((prev) => {
-                const next = [...prev];
-                if (next[i]) {
-                  next[i] = { ...next[i], amxdBytes: bytes, patchData };
-                }
-                return next;
-              });
-            } catch (err) {
-              console.warn("[useChat] Failed to download .amxd:", err);
+              setMessages((prev) =>
+                prev.map((m) =>
+                  ids.includes(m.id) ? { ...m, amxdBytes: bytes, patchData } : m
+                )
+              );
+            } catch {
+              // Download failed; leave messages without patch data
             }
           })
         );
       })
       .catch(() => {})
-      .finally(() => setHistoryLoaded(true));
+      .finally(() => {
+        if (!aborted) setHistoryLoaded(true);
+      });
+
+    return () => { aborted = true; };
   }, [pluginId]);
 
   const sendMessage = useCallback(
