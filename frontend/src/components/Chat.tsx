@@ -285,10 +285,6 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
     };
   }, [templatesOpen]);
 
-  useEffect(() => {
-    if (!showTemplatesAffordance && templatesOpen) setTemplatesOpen(false);
-  }, [showTemplatesAffordance, templatesOpen]);
-
   const toggleTemplatesPopover = () => {
     setTemplatesOpen((prev) => {
       const next = !prev;

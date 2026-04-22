@@ -4,8 +4,10 @@ import {
   getDocs,
   query,
   where,
+  type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { isAdmin } from "./admins";
 
 // ---- Types ----
 
@@ -53,16 +55,23 @@ export interface AdminStats {
 
 // ---- Helpers ----
 
+// Parent UID of an events doc is inferred from its path:
+// ref.parent is the `events` collection, ref.parent.parent is the `users/{uid}` doc.
+function isNonAdminEvent(doc: QueryDocumentSnapshot): boolean {
+  const uid = doc.ref.parent.parent?.id;
+  return !isAdmin(uid);
+}
+
 async function countEvents(eventName: string): Promise<number> {
   const q = query(collectionGroup(db, "events"), where("event", "==", eventName));
   const snap = await getDocs(q);
-  return snap.size;
+  return snap.docs.filter(isNonAdminEvent).length;
 }
 
 async function getEventDocs(eventName: string) {
   const q = query(collectionGroup(db, "events"), where("event", "==", eventName));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data());
+  return snap.docs.filter(isNonAdminEvent).map((d) => d.data());
 }
 
 // ---- Main fetch ----
@@ -101,8 +110,8 @@ export async function fetchAdminStats(): Promise<AdminStats> {
     countEvents("validation_expand"),
   ]);
 
-  // Overview
-  const totalUsers = users.size;
+  // Overview — exclude admin accounts so numbers reflect non-admin activity only.
+  const totalUsers = users.docs.filter((d) => !isAdmin(d.id)).length;
   const totalSessions = sessionStartDocs.length;
   const totalPluginsCreated = pluginCreateDocs.length;
   const successCount = successDocs.length;
