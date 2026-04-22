@@ -140,6 +140,26 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
           <AuthWorkflowDemo />
         </div>
 
+        <div className="auth-spotlight" id="auth-tutorial">
+          <div className="auth-spotlight-intro">
+            <h2 className="auth-spotlight-heading">MaxPyStudio Tutorial</h2>
+            <p className="auth-spotlight-lede">
+              Prompt and create your own audio effects and MIDI instrument!
+            </p>
+          </div>
+
+          <div className="auth-tutorial-video">
+            <iframe
+              src="https://www.youtube-nocookie.com/embed/i41Mxz2150s?rel=0"
+              title="MaxPyStudio Tutorial"
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          </div>
+        </div>
+
         <section className="auth-chunk auth-chunk--signin" id="auth-account" aria-labelledby="auth-form-title">
           <form className="auth-card" onSubmit={handleSubmit}>
             <h2 id="auth-form-title" className="auth-form-title">
