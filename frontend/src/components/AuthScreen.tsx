@@ -140,7 +140,7 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
           <AuthWorkflowDemo />
         </div>
 
-        <div className="auth-spotlight" id="auth-tutorial">
+        <div className="auth-spotlight auth-spotlight--center" id="auth-tutorial">
           <div className="auth-spotlight-intro">
             <h2 className="auth-spotlight-heading">MaxPyStudio Tutorial</h2>
             <p className="auth-spotlight-lede">

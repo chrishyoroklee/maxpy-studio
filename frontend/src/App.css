@@ -1544,6 +1544,16 @@ textarea:focus-visible {
   padding: 0 2px;
 }
 
+.auth-spotlight--center {
+  align-items: center;
+  text-align: center;
+}
+
+.auth-spotlight--center .auth-spotlight-intro {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .auth-spotlight-heading {
   font-family: var(--font-hero);
   font-size: clamp(1.85rem, 3.4vw, 2.45rem);
