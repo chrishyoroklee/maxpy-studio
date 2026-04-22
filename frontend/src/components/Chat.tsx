@@ -244,12 +244,57 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
   const filename = `${slugify(pluginName || "device")}.amxd`;
   const [input, setInput] = useState("");
   const [ratedMessages, setRatedMessages] = useState<Set<string>>(new Set());
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const templatesButtonRef = useRef<HTMLButtonElement>(null);
+  const templatesPopoverRef = useRef<HTMLDivElement>(null);
+
+  const showTemplatesAffordance = !embedded && messages.length > 0;
 
   const handleTemplateClick = (templateName: string, templateLabel: string) => {
     logEvent("template_click", { template: templateName });
     onTemplateBuild(templateName, templateLabel);
+  };
+
+  const handlePopoverTemplateClick = (templateName: string, templateLabel: string) => {
+    setTemplatesOpen(false);
+    handleTemplateClick(templateName, templateLabel);
+  };
+
+  useEffect(() => {
+    if (!templatesOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        templatesPopoverRef.current?.contains(target) ||
+        templatesButtonRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setTemplatesOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTemplatesOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [templatesOpen]);
+
+  useEffect(() => {
+    if (!showTemplatesAffordance && templatesOpen) setTemplatesOpen(false);
+  }, [showTemplatesAffordance, templatesOpen]);
+
+  const toggleTemplatesPopover = () => {
+    setTemplatesOpen((prev) => {
+      const next = !prev;
+      if (next) logEvent("templates_popover_open");
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -431,7 +476,55 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
       </div>
 
       <form onSubmit={handleSubmit} className="input-form">
+        {showTemplatesAffordance && templatesOpen && (
+          <div
+            className="templates-popover"
+            ref={templatesPopoverRef}
+            role="dialog"
+            aria-label="Templates"
+          >
+            {SUGGESTION_SECTIONS.map((section) => (
+              <SuggestionRow
+                key={section.title}
+                title={section.title}
+                items={section.items}
+                disabled={!pyodideReady || isLoading}
+                onSelect={handlePopoverTemplateClick}
+              />
+            ))}
+          </div>
+        )}
         <div className="input-wrapper">
+          {showTemplatesAffordance && (
+            <button
+              type="button"
+              ref={templatesButtonRef}
+              className="templates-button"
+              onClick={toggleTemplatesPopover}
+              aria-label="Show templates"
+              aria-expanded={templatesOpen}
+              aria-haspopup="dialog"
+              disabled={!pyodideReady || isLoading}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              <span>Templates</span>
+            </button>
+          )}
           <textarea
             ref={textareaRef}
             value={input}

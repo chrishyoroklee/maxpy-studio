@@ -1,4 +1,4 @@
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret, defineInt } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import * as fs from "fs";
@@ -6,6 +6,24 @@ import * as path from "path";
 
 admin.initializeApp();
 const firestore = admin.firestore();
+
+export const deleteUserData = onCall(
+  { region: "us-central1", cors: true },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "Sign in required.");
+    }
+
+    const userRef = firestore.doc(`users/${uid}`);
+    await firestore.recursiveDelete(userRef);
+
+    const bucket = admin.storage().bucket();
+    await bucket.deleteFiles({ prefix: `generations/${uid}/` });
+
+    return { ok: true };
+  },
+);
 
 const openrouterApiKey = defineSecret("OPENROUTER_API_KEY");
 const rateLimitPerHour = defineInt("RATE_LIMIT_PER_HOUR", { default: 20 });

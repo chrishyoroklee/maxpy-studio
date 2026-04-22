@@ -16,6 +16,13 @@ export function AuthLandingRail() {
         </svg>
         <span>Demo</span>
       </a>
+      <a className="auth-rail-item" href="#auth-tutorial" title="Tutorial video">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <rect x="2" y="5" width="20" height="14" rx="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" stroke="none" />
+        </svg>
+        <span>Tutorial</span>
+      </a>
       <a className="auth-rail-item" href="#auth-account" title="Sign in">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" strokeLinecap="round" strokeLinejoin="round" />

@@ -5,6 +5,9 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
   signOut,
   sendPasswordResetEmail,
   sendEmailVerification,
@@ -12,8 +15,18 @@ import {
   deleteUser,
   type User,
 } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { auth, functions } from "../lib/firebase";
 import { ensureUserDoc } from "../lib/firestore";
+
+export class ReauthRequiredError extends Error {
+  providerId: "password" | "google.com" | "unknown";
+  constructor(providerId: "password" | "google.com" | "unknown") {
+    super("Recent sign-in required");
+    this.name = "ReauthRequiredError";
+    this.providerId = providerId;
+  }
+}
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -76,11 +89,53 @@ export function useAuth() {
     }
   }, []);
 
-  const deleteAccount = useCallback(async () => {
-    if (auth.currentUser) {
-      await deleteUser(auth.currentUser);
+  const reauthenticate = useCallback(async (password?: string) => {
+    const current = auth.currentUser;
+    if (!current) throw new Error("Not signed in");
+    const providerId = current.providerData[0]?.providerId;
+
+    if (providerId === "password") {
+      if (!password) {
+        throw new ReauthRequiredError("password");
+      }
+      if (!current.email) throw new Error("Account has no email");
+      const credential = EmailAuthProvider.credential(current.email, password);
+      await reauthenticateWithCredential(current, credential);
+    } else if (providerId === "google.com") {
+      await reauthenticateWithPopup(current, googleProvider);
+    } else {
+      throw new ReauthRequiredError("unknown");
     }
   }, []);
+
+  const deleteAccount = useCallback(async (password?: string) => {
+    const current = auth.currentUser;
+    if (!current) return;
+
+    const providerId = current.providerData[0]?.providerId;
+    const normalizedProvider: "password" | "google.com" | "unknown" =
+      providerId === "password" ? "password"
+        : providerId === "google.com" ? "google.com"
+        : "unknown";
+
+    const attemptDeleteUser = async () => {
+      try {
+        await deleteUser(current);
+        return;
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        if (code !== "auth/requires-recent-login") throw err;
+        if (password === undefined && normalizedProvider === "password") {
+          throw new ReauthRequiredError("password");
+        }
+        await reauthenticate(password);
+        await deleteUser(current);
+      }
+    };
+
+    await httpsCallable(functions, "deleteUserData")();
+    await attemptDeleteUser();
+  }, [reauthenticate]);
 
   return {
     user,
