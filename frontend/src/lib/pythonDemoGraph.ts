@@ -64,7 +64,9 @@ export function parsePythonDemoGraph(code: string): PythonDemoGraphResult {
   let currentPos: Position = { x: 40, y: 100 };
 
   const placeRawRe =
-    /^\s*([A-Za-z_]\w*)\s*=\s*place_raw\(\s*\{[\s\S]*?"maxclass"\s*:\s*"([^"]+)"[\s\S]*?"text"\s*:\s*"([^"]+)"[\s\S]*?\}\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)\s*$/gm;
+    /^\s*([A-Za-z_]\w*)\s*=\s*place_raw\(\s*(\{[\s\S]*?\})\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)\s*$/gm;
+  const maxclassFieldRe = /"maxclass"\s*:\s*"([^"]+)"/;
+  const textFieldRe = /"text"\s*:\s*"([^"]+)"/;
   const connectPairRe = /\[\s*([A-Za-z_]\w*)\.outs\[(\d+)\]\s*,\s*([A-Za-z_]\w*)\.ins\[(\d+)\]\s*\]/g;
 
   // Track last seen patch.set_position while scanning lines (keeps semantics close to original code).
@@ -100,7 +102,12 @@ export function parsePythonDemoGraph(code: string): PythonDemoGraphResult {
 
   // place_raw blocks can span multiple lines, so parse on the whole document.
   for (const match of code.matchAll(placeRawRe)) {
-    const [, varName, maxclass, text, x, y] = match;
+    const [, varName, dictBody, x, y] = match;
+    const maxclassMatch = maxclassFieldRe.exec(dictBody);
+    const textMatch = textFieldRe.exec(dictBody);
+    if (!maxclassMatch || !textMatch) continue;
+    const maxclass = maxclassMatch[1];
+    const text = textMatch[1];
     // The landing demo should focus on the signal-flow graph, not presentation chrome.
     // The example code includes background/header panels for Ableton presentation mode.
     if (maxclass === "panel") continue;

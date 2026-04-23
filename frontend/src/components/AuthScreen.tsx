@@ -134,7 +134,7 @@ export function AuthScreen({ signIn, signUp, signInWithGoogle, resetPassword }: 
             <ol className="auth-spotlight-steps">
               <li>Send a prompt to generate a patch graph and Python output.</li>
               <li>Drag nodes to rearrange and explore the structure.</li>
-              <li>Download the .amxd file and drag it onto a MIDI track in Ableton Live.</li>
+              <li>Download the .amxd file and drag it onto an audio track in Ableton Live.</li>
             </ol>
           </div>
 
