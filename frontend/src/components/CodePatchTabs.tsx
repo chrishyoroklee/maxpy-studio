@@ -23,6 +23,9 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
   const [activeTab, setActiveTab] = useState<Tab | null>(null); // null = collapsed (button gate)
   const [fullscreen, setFullscreen] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
+  // Chat is gated on onAuthStateChanged in App.tsx, so currentUser is populated
+  // by the time CodePatchTabs mounts. Embedded/unauthenticated paths fall back
+  // to "graph-first" and should be filtered out of experiment analysis.
   const [variant] = useState(() => getPanelOrderVariant(auth.currentUser?.uid));
 
   const tabOpenTime = useRef<number | null>(null);
