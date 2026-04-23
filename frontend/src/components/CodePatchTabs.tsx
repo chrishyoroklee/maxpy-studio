@@ -4,6 +4,8 @@ import { PatchGraph } from "./PatchGraph";
 import type { PatchGraph as PatchGraphData } from "../lib/patchGraphParser";
 import type { ValidationIssue } from "../lib/patchValidator";
 import { logEvent } from "../lib/firestore";
+import { auth } from "../lib/firebase";
+import { getPanelOrderVariant } from "../lib/experiment";
 import { EditorView } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { python } from "@codemirror/lang-python";
@@ -21,14 +23,25 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
   const [activeTab, setActiveTab] = useState<Tab | null>(null); // null = collapsed (button gate)
   const [fullscreen, setFullscreen] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
+  // Chat is gated on onAuthStateChanged in App.tsx, so currentUser is populated
+  // by the time CodePatchTabs mounts. Embedded/unauthenticated paths fall back
+  // to "graph-first" and should be filtered out of experiment analysis.
+  const [variant] = useState(() => getPanelOrderVariant(auth.currentUser?.uid));
 
   const tabOpenTime = useRef<number | null>(null);
   const fullscreenOpenTime = useRef<number | null>(null);
+  const enrolledRef = useRef(false);
+
+  useEffect(() => {
+    if (enrolledRef.current) return;
+    enrolledRef.current = true;
+    logEvent("experiment_assignment", { experiment: "panel_order", variant });
+  }, [variant]);
 
   const openTab = (tab: Tab) => {
     setActiveTab(tab);
     tabOpenTime.current = Date.now();
-    logEvent("view_open", { view: tab });
+    logEvent("view_open", { view: tab, variant });
   };
 
   const closeTabs = () => {
@@ -38,6 +51,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
         view: activeTab,
         durationMs: duration,
         wasGlance: duration < 3000,
+        variant,
       });
     }
     setActiveTab(null);
@@ -48,18 +62,18 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
   const switchTab = (tab: Tab) => {
     if (tabOpenTime.current && activeTab && activeTab !== tab) {
       const duration = Date.now() - tabOpenTime.current;
-      logEvent("view_close", { view: activeTab, durationMs: duration, wasGlance: duration < 3000 });
+      logEvent("view_close", { view: activeTab, durationMs: duration, wasGlance: duration < 3000, variant });
     }
     setActiveTab(tab);
     tabOpenTime.current = Date.now();
-    logEvent("view_open", { view: tab });
+    logEvent("view_open", { view: tab, variant });
   };
 
   const toggleValidation = () => {
     const newState = !validationOpen;
     setValidationOpen(newState);
     if (newState) {
-      logEvent("validation_expand", { warningCount: warnings?.length || 0 });
+      logEvent("validation_expand", { warningCount: warnings?.length || 0, variant });
     }
   };
 
@@ -68,7 +82,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (fullscreenOpenTime.current) {
-          logEvent("graph_fullscreen_close", { durationMs: Date.now() - fullscreenOpenTime.current });
+          logEvent("graph_fullscreen_close", { durationMs: Date.now() - fullscreenOpenTime.current, variant });
           fullscreenOpenTime.current = null;
         }
         setFullscreen(false);
@@ -80,7 +94,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
       document.removeEventListener("keydown", handleKey);
       document.body.style.overflow = "";
     };
-  }, [fullscreen]);
+  }, [fullscreen, variant]);
 
   // CodeMirror editor
   const cmContainerRef = useRef<HTMLDivElement>(null);
@@ -141,24 +155,31 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
 
   // Collapsed state: show two big buttons as a gate
   if (activeTab === null) {
+    const patchGateButton = (
+      <button key="patch" className="view-gate-button" onClick={() => openTab("patch")}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+        </svg>
+        <span>View Patch Graph</span>
+      </button>
+    );
+    const codeGateButton = (
+      <button key="code" className="view-gate-button" onClick={() => openTab("code")}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <polyline points="16 18 22 12 16 6" />
+          <polyline points="8 6 2 12 8 18" />
+        </svg>
+        <span>View Python Code</span>
+      </button>
+    );
     return (
       <div className="view-gate">
-        <button className="view-gate-button" onClick={() => openTab("patch")}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <rect x="3" y="3" width="7" height="7" />
-            <rect x="14" y="3" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" />
-            <rect x="14" y="14" width="7" height="7" />
-          </svg>
-          <span>View Patch Graph</span>
-        </button>
-        <button className="view-gate-button" onClick={() => openTab("code")}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="16 18 22 12 16 6" />
-            <polyline points="8 6 2 12 8 18" />
-          </svg>
-          <span>View Python Code</span>
-        </button>
+        {variant === "graph-first"
+          ? <>{patchGateButton}{codeGateButton}</>
+          : <>{codeGateButton}{patchGateButton}</>}
       </div>
     );
   }
@@ -167,32 +188,43 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
     <>
       <div className="code-patch-tabs">
         <div className="tabs-bar">
-          <button
-            className={`tab-button ${activeTab === "patch" ? "active" : ""}`}
-            onClick={() => switchTab("patch")}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-              <rect x="14" y="14" width="7" height="7" />
-            </svg>
-            Patch
-          </button>
-          <button
-            className={`tab-button ${activeTab === "code" ? "active" : ""}`}
-            onClick={() => switchTab("code")}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="16 18 22 12 16 6" />
-              <polyline points="8 6 2 12 8 18" />
-            </svg>
-            Code
-          </button>
+          {(() => {
+            const patchTab = (
+              <button
+                key="patch"
+                className={`tab-button ${activeTab === "patch" ? "active" : ""}`}
+                onClick={() => switchTab("patch")}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                </svg>
+                Patch
+              </button>
+            );
+            const codeTab = (
+              <button
+                key="code"
+                className={`tab-button ${activeTab === "code" ? "active" : ""}`}
+                onClick={() => switchTab("code")}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+                Code
+              </button>
+            );
+            return variant === "graph-first"
+              ? <>{patchTab}{codeTab}</>
+              : <>{codeTab}{patchTab}</>;
+          })()}
           {activeTab === "patch" && hasPatch && (
             <button
               className="tab-button tab-expand"
-              onClick={() => { setFullscreen(true); fullscreenOpenTime.current = Date.now(); logEvent("graph_fullscreen_open"); }}
+              onClick={() => { setFullscreen(true); fullscreenOpenTime.current = Date.now(); logEvent("graph_fullscreen_open", { variant }); }}
               title="Expand to fullscreen"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -242,7 +274,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
           )}
           {activeTab === "patch" && (
             hasPatch ? (
-              <div className="patch-graph-container" onClick={() => { setFullscreen(true); fullscreenOpenTime.current = Date.now(); logEvent("graph_fullscreen_open"); }} style={{ cursor: "pointer" }}>
+              <div className="patch-graph-container" onClick={() => { setFullscreen(true); fullscreenOpenTime.current = Date.now(); logEvent("graph_fullscreen_open", { variant }); }} style={{ cursor: "pointer" }}>
                 <PatchGraph key={patchKey} nodes={patchData.nodes} edges={patchData.edges} />
               </div>
             ) : (
@@ -273,7 +305,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
         <div className="patch-fullscreen-overlay">
           <button className="patch-fullscreen-close" onClick={() => {
             if (fullscreenOpenTime.current) {
-              logEvent("graph_fullscreen_close", { durationMs: Date.now() - fullscreenOpenTime.current });
+              logEvent("graph_fullscreen_close", { durationMs: Date.now() - fullscreenOpenTime.current, variant });
               fullscreenOpenTime.current = null;
             }
             setFullscreen(false);
