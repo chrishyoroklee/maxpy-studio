@@ -63,8 +63,6 @@ export function parsePythonDemoGraph(code: string): PythonDemoGraphResult {
 
   let currentPos: Position = { x: 40, y: 100 };
 
-  const setPosRe = /\b(?:patch|p)\.set_position\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/g;
-  const placeRe = /^\s*([A-Za-z_]\w*)\s*=\s*(?:patch|p)\.place\(\s*["']([^"']+)["']\s*\)\s*\[\s*0\s*\]/gm;
   const placeRawRe =
     /^\s*([A-Za-z_]\w*)\s*=\s*place_raw\(\s*\{[\s\S]*?"maxclass"\s*:\s*"([^"]+)"[\s\S]*?"text"\s*:\s*"([^"]+)"[\s\S]*?\}\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)\s*$/gm;
   const connectPairRe = /\[\s*([A-Za-z_]\w*)\.outs\[(\d+)\]\s*,\s*([A-Za-z_]\w*)\.ins\[(\d+)\]\s*\]/g;
