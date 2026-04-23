@@ -166,7 +166,7 @@
 .patch-graph--animate-edges .react-flow__edge.signal-edge .react-flow__edge-path {
   stroke-dasharray: 420;
   stroke-dashoffset: 420;
-  animation: patch-edge-draw 1.05s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+  animation: patch-edge-draw 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s forwards;
 }
 
 @keyframes patch-edge-draw {

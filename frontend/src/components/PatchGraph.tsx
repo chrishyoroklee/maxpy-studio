@@ -17,6 +17,7 @@ import {
   type Node,
   type Edge,
   type NodeChange,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
@@ -140,6 +141,8 @@ export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInter
   const hasLoggedInteraction = useRef(false);
   const isInitialFit = useRef(true);
   const hasNotifiedUser = useRef(false);
+  const flowRef = useRef<ReactFlowInstance | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Reset when new patch data arrives
   useEffect(() => {
@@ -176,6 +179,32 @@ export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInter
     []
   );
 
+  // ReactFlow can render with incorrect edge geometry if its container resizes
+  // (e.g. split-pane height clamps). Re-fit the view on resize until the user
+  // interacts, then stop so we don't fight their viewport.
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    let raf = 0;
+    const ro = new ResizeObserver(() => {
+      if (hasLoggedInteraction.current) return;
+      if (!flowRef.current) return;
+      if (!nodes.length) return;
+
+      window.cancelAnimationFrame(raf);
+      raf = window.requestAnimationFrame(() => {
+        // duration=0 avoids a second "animation" that can feel like jumpiness
+        flowRef.current?.fitView({ padding: 0.2, duration: 0 });
+      });
+    });
+
+    ro.observe(containerRef.current);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, [nodes.length]);
+
   const notifyUserInteract = useCallback(() => {
     if (!onUserInteract) return;
     if (hasNotifiedUser.current) return;
@@ -188,13 +217,19 @@ export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInter
     .join(" ");
 
   return (
-    <div className={rootClass}>
+    <div className={rootClass} ref={containerRef}>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
+        onInit={(instance) => {
+          flowRef.current = instance;
+          // In case the initial mount happened during a layout transition,
+          // schedule an immediate refit.
+          window.requestAnimationFrame(() => instance.fitView({ padding: 0.2, duration: 0 }));
+        }}
         onNodesChange={onNodesChange}
         nodesDraggable={true}
         nodesConnectable={false}
