@@ -5,6 +5,7 @@ import {
   query,
   where,
   type QueryDocumentSnapshot,
+  type DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { isAdmin } from "./admins";
@@ -68,6 +69,17 @@ async function countEvents(eventName: string): Promise<number> {
   return snap.docs.filter(isNonAdminEvent).length;
 }
 
+async function countPlugins(userDocs: QueryDocumentSnapshot<DocumentData>[]): Promise<number> {
+  const nonAdminUsers = userDocs.filter((d) => !isAdmin(d.id));
+  const counts = await Promise.all(
+    nonAdminUsers.map(async (u) => {
+      const snap = await getDocs(collection(db, "users", u.id, "plugins"));
+      return snap.size;
+    }),
+  );
+  return counts.reduce((a, b) => a + b, 0);
+}
+
 async function getEventDocs(eventName: string) {
   const q = query(collectionGroup(db, "events"), where("event", "==", eventName));
   const snap = await getDocs(q);
@@ -78,10 +90,11 @@ async function getEventDocs(eventName: string) {
 
 export async function fetchAdminStats(): Promise<AdminStats> {
   // Run all queries in parallel
+  const users = await getDocs(collection(db, "users"));
+
   const [
-    users,
     sessionStartDocs,
-    pluginCreateDocs,
+    totalPluginsCreated,
     successDocs,
     failureDocs,
     retryDocs,
@@ -94,9 +107,8 @@ export async function fetchAdminStats(): Promise<AdminStats> {
     downloadDocs,
     validationExpandCount,
   ] = await Promise.all([
-    getDocs(collection(db, "users")),
     getEventDocs("session_start"),
-    getEventDocs("plugin_create"),
+    countPlugins(users.docs),
     getEventDocs("generation_success"),
     getEventDocs("generation_failure"),
     getEventDocs("retry_attempt"),
@@ -113,7 +125,6 @@ export async function fetchAdminStats(): Promise<AdminStats> {
   // Overview — exclude admin accounts so numbers reflect non-admin activity only.
   const totalUsers = users.docs.filter((d) => !isAdmin(d.id)).length;
   const totalSessions = sessionStartDocs.length;
-  const totalPluginsCreated = pluginCreateDocs.length;
   const successCount = successDocs.length;
   const failureCount = failureDocs.length;
   const totalGenerations = successCount + failureCount;
