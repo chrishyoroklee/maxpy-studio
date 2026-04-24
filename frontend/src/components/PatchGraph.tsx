@@ -135,9 +135,11 @@ interface PatchGraphProps {
   className?: string;
   /** Fired on first meaningful user interaction (pan/zoom/drag/click). */
   onUserInteract?: () => void;
+  /** A/B experiment variant for event tagging. */
+  variant?: string;
 }
 
-export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInteract }: PatchGraphProps) {
+export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInteract, variant }: PatchGraphProps) {
   const hasLoggedInteraction = useRef(false);
   const isInitialFit = useRef(true);
   const hasNotifiedUser = useRef(false);
@@ -248,7 +250,7 @@ export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInter
           notifyUserInteract();
           if (!hasLoggedInteraction.current) {
             hasLoggedInteraction.current = true;
-            logEvent("graph_interact", { type: "zoom_pan" });
+            logEvent("graph_interact", { type: "zoom_pan", variant });
           }
         }}
         onNodeDragStart={() => {
@@ -259,7 +261,7 @@ export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInter
           notifyUserInteract();
           if (!hasLoggedInteraction.current) {
             hasLoggedInteraction.current = true;
-            logEvent("graph_interact", { type: "node_click" });
+            logEvent("graph_interact", { type: "node_click", variant });
           }
         }}
       >

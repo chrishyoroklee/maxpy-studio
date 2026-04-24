@@ -6,6 +6,7 @@ import type { ValidationIssue } from "../lib/patchValidator";
 import { logEvent } from "../lib/firestore";
 import { auth } from "../lib/firebase";
 import { getPanelOrderVariant } from "../lib/experiment";
+import { isAdmin } from "../lib/admins";
 import { EditorView } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { python } from "@codemirror/lang-python";
@@ -35,7 +36,9 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
   useEffect(() => {
     if (enrolledRef.current) return;
     enrolledRef.current = true;
-    logEvent("experiment_assignment", { experiment: "panel_order", variant });
+    if (!isAdmin(auth.currentUser?.uid)) {
+      logEvent("experiment_assignment", { experiment: "panel_order", variant });
+    }
   }, [variant]);
 
   const openTab = (tab: Tab) => {
@@ -275,7 +278,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
           {activeTab === "patch" && (
             hasPatch ? (
               <div className="patch-graph-container" onClick={() => { setFullscreen(true); fullscreenOpenTime.current = Date.now(); logEvent("graph_fullscreen_open", { variant }); }} style={{ cursor: "pointer" }}>
-                <PatchGraph key={patchKey} nodes={patchData.nodes} edges={patchData.edges} />
+                <PatchGraph key={patchKey} nodes={patchData.nodes} edges={patchData.edges} variant={variant} />
               </div>
             ) : (
               <div className="patch-placeholder">
@@ -315,7 +318,7 @@ export function CodePatchTabs({ code, patchData, warnings }: Props) {
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-          <PatchGraph key={`fs-${patchKey}`} nodes={patchData.nodes} edges={patchData.edges} />
+          <PatchGraph key={`fs-${patchKey}`} nodes={patchData.nodes} edges={patchData.edges} variant={variant} />
         </div>,
         document.body
       )}
