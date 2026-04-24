@@ -81,7 +81,6 @@ export async function fetchAdminStats(): Promise<AdminStats> {
   const [
     users,
     sessionStartDocs,
-    pluginCreateDocs,
     successDocs,
     failureDocs,
     retryDocs,
@@ -96,7 +95,6 @@ export async function fetchAdminStats(): Promise<AdminStats> {
   ] = await Promise.all([
     getDocs(collection(db, "users")),
     getEventDocs("session_start"),
-    getEventDocs("plugin_create"),
     getEventDocs("generation_success"),
     getEventDocs("generation_failure"),
     getEventDocs("retry_attempt"),
@@ -111,9 +109,12 @@ export async function fetchAdminStats(): Promise<AdminStats> {
   ]);
 
   // Overview — exclude admin accounts so numbers reflect non-admin activity only.
-  const totalUsers = users.docs.filter((d) => !isAdmin(d.id)).length;
+  const nonAdminUsers = users.docs.filter((d) => !isAdmin(d.id));
+  const totalUsers = nonAdminUsers.length;
+  const totalPluginsCreated = nonAdminUsers.reduce(
+    (sum, d) => sum + ((d.data().totalPlugins as number) || 0), 0,
+  );
   const totalSessions = sessionStartDocs.length;
-  const totalPluginsCreated = pluginCreateDocs.length;
   const successCount = successDocs.length;
   const failureCount = failureDocs.length;
   const totalGenerations = successCount + failureCount;
