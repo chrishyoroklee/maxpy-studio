@@ -250,7 +250,7 @@ export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInter
           notifyUserInteract();
           if (!hasLoggedInteraction.current) {
             hasLoggedInteraction.current = true;
-            logEvent("graph_interact", { type: "zoom_pan", variant });
+            logEvent("graph_interact", { type: "zoom_pan", ...(variant ? { variant } : {}) });
           }
         }}
         onNodeDragStart={() => {
@@ -261,7 +261,7 @@ export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInter
           notifyUserInteract();
           if (!hasLoggedInteraction.current) {
             hasLoggedInteraction.current = true;
-            logEvent("graph_interact", { type: "node_click", variant });
+            logEvent("graph_interact", { type: "node_click", ...(variant ? { variant } : {}) });
           }
         }}
       >
