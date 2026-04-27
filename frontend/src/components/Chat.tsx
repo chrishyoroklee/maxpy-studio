@@ -161,8 +161,8 @@ function SuggestionRow({
   };
 
   return (
-    <div className="suggestion-section" role="region" aria-labelledby={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}>
-      <h4 id={`section-${title.replace(/\s+/g, '-').toLowerCase()}`} className="suggestion-section-title">{title}</h4>
+    <div className="suggestion-section">
+      <h4 className="suggestion-section-title">{title}</h4>
       <div className="suggestion-row-wrap">
         <button
           type="button"
