@@ -381,6 +381,20 @@ textarea:focus-visible {
   animation: fadeUp 0.6s var(--ease-out) 0.1s both;
 }
 
+.templates-section {
+  max-width: 700px;
+  width: 100%;
+}
+
+.templates-heading {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin: 0 4px 16px;
+  text-transform: uppercase;
+}
+
 .suggestion-section {
   max-width: 700px;
   width: 100%;
