@@ -161,8 +161,8 @@ function SuggestionRow({
   };
 
   return (
-    <div className="suggestion-section">
-      <div className="suggestion-section-title">{title}</div>
+    <div className="suggestion-section" role="region" aria-labelledby={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}>
+      <h3 id={`section-${title.replace(/\s+/g, '-').toLowerCase()}`} className="suggestion-section-title">{title}</h3>
       <div className="suggestion-row-wrap">
         <button
           type="button"
@@ -195,9 +195,10 @@ function SuggestionRow({
               className="suggestion-card"
               disabled={disabled}
               onClick={() => onSelect(s.template, s.label)}
+              aria-label={`${s.label}: ${s.desc}`}
             >
               <span className="suggestion-label">{s.label}</span>
-              <span className="suggestion-desc">{s.desc}</span>
+              <span className="suggestion-desc" aria-hidden="true">{s.desc}</span>
             </button>
           ))}
         </div>
@@ -236,6 +237,14 @@ const MODELS = [
 
 function slugify(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "device";
+}
+
+function announceDownload(filename: string) {
+  const el = document.getElementById("sr-announce");
+  if (el) {
+    el.textContent = "";
+    setTimeout(() => { el.textContent = `${filename} downloaded successfully`; }, 100);
+  }
 }
 
 export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideReady, embedded, model, setModel, pluginName, pluginId }: Props) {
@@ -314,6 +323,7 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
 
   return (
     <div className="chat-container">
+      <div id="sr-announce" aria-live="polite" className="sr-only" />
       <div className="messages">
         {messages.length === 0 && (
           <div className="welcome">
@@ -354,9 +364,9 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                   {!isM4L && (
                     <button
                       className="download-button"
-                      onClick={() => { logEvent("download", { source: "embedded" }); downloadBlob(lastAssistant.amxdBytes!, filename); }}
+                      onClick={() => { logEvent("download", { source: "embedded" }); downloadBlob(lastAssistant.amxdBytes!, filename); announceDownload(filename); }}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                         <polyline points="7 10 12 15 17 10" />
                         <line x1="12" y1="15" x2="12" y2="3" />
@@ -407,7 +417,7 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                     {msg.amxdBytes && !isM4L && (
                       <button
                         className="download-button"
-                        onClick={() => { logEvent("download", { source: "chat", pluginId: pluginId || undefined, hasWarnings: (msg.warnings?.length || 0) > 0, warningCount: msg.warnings?.length || 0 }); downloadBlob(msg.amxdBytes!, filename); }}
+                        onClick={() => { logEvent("download", { source: "chat", pluginId: pluginId || undefined, hasWarnings: (msg.warnings?.length || 0) > 0, warningCount: msg.warnings?.length || 0 }); downloadBlob(msg.amxdBytes!, filename); announceDownload(filename); }}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
