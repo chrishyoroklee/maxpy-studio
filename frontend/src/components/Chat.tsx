@@ -161,8 +161,8 @@ function SuggestionRow({
   };
 
   return (
-    <div className="suggestion-section" role="region" aria-labelledby={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}>
-      <h3 id={`section-${title.replace(/\s+/g, '-').toLowerCase()}`} className="suggestion-section-title">{title}</h3>
+    <div className="suggestion-section">
+      <h4 className="suggestion-section-title">{title}</h4>
       <div className="suggestion-row-wrap">
         <button
           type="button"
@@ -329,15 +329,18 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
           <div className="welcome">
             <h2>MaxPy Studio</h2>
             <p>Describe a plugin. Get an .amxd for Ableton.</p>
-            {SUGGESTION_SECTIONS.map((section) => (
-              <SuggestionRow
-                key={section.title}
-                title={section.title}
-                items={section.items}
-                disabled={!pyodideReady || isLoading}
-                onSelect={handleTemplateClick}
-              />
-            ))}
+            <div className="templates-section" role="region" aria-labelledby="templates-heading">
+              <h3 id="templates-heading" className="templates-heading">Templates</h3>
+              {SUGGESTION_SECTIONS.map((section) => (
+                <SuggestionRow
+                  key={section.title}
+                  title={section.title}
+                  items={section.items}
+                  disabled={!pyodideReady || isLoading}
+                  onSelect={handleTemplateClick}
+                />
+              ))}
+            </div>
           </div>
         )}
 
