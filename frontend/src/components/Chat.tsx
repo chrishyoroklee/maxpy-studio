@@ -329,15 +329,17 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
           <div className="welcome">
             <h2>MaxPy Studio</h2>
             <p>Describe a plugin. Get an .amxd for Ableton.</p>
-            {SUGGESTION_SECTIONS.map((section) => (
-              <SuggestionRow
-                key={section.title}
-                title={section.title}
-                items={section.items}
-                disabled={!pyodideReady || isLoading}
-                onSelect={handleTemplateClick}
-              />
-            ))}
+            <div role="region" aria-label="Templates — choose a starting point or type your own prompt below">
+              {SUGGESTION_SECTIONS.map((section) => (
+                <SuggestionRow
+                  key={section.title}
+                  title={section.title}
+                  items={section.items}
+                  disabled={!pyodideReady || isLoading}
+                  onSelect={handleTemplateClick}
+                />
+              ))}
+            </div>
           </div>
         )}
 
