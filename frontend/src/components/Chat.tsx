@@ -161,8 +161,8 @@ function SuggestionRow({
   };
 
   return (
-    <div className="suggestion-section" role="region" aria-label={`${title} templates`}>
-      <h3 className="suggestion-section-title">{title}</h3>
+    <div className="suggestion-section" role="region" aria-labelledby={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}>
+      <h3 id={`section-${title.replace(/\s+/g, '-').toLowerCase()}`} className="suggestion-section-title">{title}</h3>
       <div className="suggestion-row-wrap">
         <button
           type="button"
@@ -243,7 +243,7 @@ function announceDownload(filename: string) {
   const el = document.getElementById("sr-announce");
   if (el) {
     el.textContent = "";
-    requestAnimationFrame(() => { el.textContent = `${filename} downloaded successfully`; });
+    setTimeout(() => { el.textContent = `${filename} downloaded successfully`; }, 100);
   }
 }
 
@@ -323,7 +323,7 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
 
   return (
     <div className="chat-container">
-      <div id="sr-announce" aria-live="assertive" className="sr-only" />
+      <div id="sr-announce" aria-live="polite" className="sr-only" />
       <div className="messages">
         {messages.length === 0 && (
           <div className="welcome">
@@ -366,7 +366,7 @@ export function Chat({ messages, isLoading, onSend, onTemplateBuild, pyodideRead
                       className="download-button"
                       onClick={() => { logEvent("download", { source: "embedded" }); downloadBlob(lastAssistant.amxdBytes!, filename); announceDownload(filename); }}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                         <polyline points="7 10 12 15 17 10" />
                         <line x1="12" y1="15" x2="12" y2="3" />
