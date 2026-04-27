@@ -384,6 +384,10 @@ textarea:focus-visible {
 .templates-section {
   max-width: 700px;
   width: 100%;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 14px 14px 4px;
+  background: var(--bg-surface);
 }
 
 .templates-heading {
