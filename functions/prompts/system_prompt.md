@@ -85,6 +85,7 @@ Objects requiring place_raw:
 - `live.dial` — automatable knob (needs parameter_enable, saved_attribute_attributes)
 - `panel` — background rectangle for presentation mode
 - `notein` — MIDI input (numinlets=1, numoutlets=3)
+- `noteout` — MIDI note output (numinlets=3, numoutlets=0)
 - `> 0`, `!- 1.` — operators with special characters
 - `message` boxes (maxclass="message")
 

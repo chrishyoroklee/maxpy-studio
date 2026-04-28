@@ -123,7 +123,7 @@ def make_dial(name, varname, px, min_v, max_v, init, exponent=1.0, unitstyle=1):
             "maxclass": "live.dial", "varname": varname,
             "text": "live.dial",
             "numinlets": 1, "numoutlets": 2, "outlettype": ["", "float"],
-            "patching_rect": [430.0, 230.0, 44.0, 48.0],
+            "patching_rect": [430.0 + (px - 15), 230.0, 44.0, 48.0],
             "presentation": 1,
             "presentation_rect": [float(px), 30.0, 44.0, 48.0],
             "parameter_enable": 1, **DIAL_COLORS,
@@ -137,7 +137,7 @@ def make_dial(name, varname, px, min_v, max_v, init, exponent=1.0, unitstyle=1):
                 }
             }
         }
-    }, 430, 230)
+    }, int(430 + (px - 15)), 230)
 
 
 # Tempo dial: BPM → ms conversion (60000 / BPM = ms per beat)
@@ -174,8 +174,14 @@ for i in range(8):
     step_dials.append(dial)
 
 # noteout: inlets = pitch (0), velocity (1), channel (2)
-patch.set_position(30, 350)
-noteout = patch.place("noteout")[0]
+noteout = place_raw({
+    "box": {
+        "maxclass": "newobj", "numinlets": 3, "numoutlets": 0,
+        "outlettype": [],
+        "patching_rect": [30.0, 350.0, 55.0, 22.0],
+        "text": "noteout",
+    }
+}, 30, 350)
 
 # Fixed velocity (100)
 patch.set_position(200, 310)
