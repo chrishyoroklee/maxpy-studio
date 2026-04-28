@@ -59,11 +59,12 @@ export function validatePatch(maxpat: MaxPatJson): ValidationResult {
   // 2. NO_OUTPUT
   const hasPlugout = [...boxMap.values()].some((b) => boxText(b).includes("plugout~"));
   const hasMidiout = [...boxMap.values()].some((b) => boxText(b).includes("midiout"));
-  if (!hasPlugout && !hasMidiout) {
+  const hasNoteout = [...boxMap.values()].some((b) => boxText(b).includes("noteout"));
+  if (!hasPlugout && !hasMidiout && !hasNoteout) {
     issues.push({
       severity: "error",
       code: "NO_OUTPUT",
-      message: "No output object found (plugout~ or midiout).",
+      message: "No output object found (plugout~, midiout, or noteout).",
     });
   }
 
