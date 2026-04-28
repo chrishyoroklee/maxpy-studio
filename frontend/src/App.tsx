@@ -31,6 +31,7 @@ function App() {
   const [view, setView] = useState<View>("plugins");
   const [activePluginId, setActivePluginId] = useState<string | null>(null);
   const [activePluginName, setActivePluginName] = useState<string>("");
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   const { messages, isLoading, sendMessage, buildTemplate, clearMessages } = useChat(runCode, activePluginId);
 
@@ -70,11 +71,20 @@ function App() {
     setView("workspace");
   };
 
-  const backToPlugins = () => {
+  const doBackToPlugins = () => {
+    setShowLeaveConfirm(false);
     setActivePluginId(null);
     setActivePluginName("");
     clearMessages();
     setView("plugins");
+  };
+
+  const backToPlugins = () => {
+    if (isLoading) {
+      setShowLeaveConfirm(true);
+      return;
+    }
+    doBackToPlugins();
   };
 
   // Auth loading
@@ -227,7 +237,7 @@ function App() {
                 </button>
                 {showMenu && (
                   <div className="header-dropdown">
-                    <button onClick={() => { setView("plugins"); setShowMenu(false); }}>My Plugins</button>
+                    <button onClick={() => { backToPlugins(); setShowMenu(false); }}>My Plugins</button>
                     <button onClick={() => { setView("settings"); setShowMenu(false); }}>Settings</button>
                     {user?.uid && ADMIN_UIDS.has(user.uid) && <button onClick={() => { setView("admin"); setShowMenu(false); }}>Admin</button>}
                     <button onClick={() => { logout(); setShowMenu(false); }}>Sign Out</button>
@@ -263,6 +273,28 @@ function App() {
           pluginName={activePluginName}
         />
       </main>
+      {showLeaveConfirm && (
+        <div className="modal-overlay" onClick={() => setShowLeaveConfirm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Generation in progress</h3>
+            <p className="modal-subtitle">
+              Your plugin is still being generated. Leaving now will cancel it.
+            </p>
+            <div className="modal-actions">
+              <button className="modal-cancel" onClick={() => setShowLeaveConfirm(false)}>
+                Stay
+              </button>
+              <button
+                className="modal-confirm"
+                style={{ background: "var(--error)" }}
+                onClick={doBackToPlugins}
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
