@@ -71,7 +71,7 @@ async function classifyDeviceType(
         "X-Title": "MaxPy Studio",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-lite",
+        model: "google/gemini-2.0-flash-lite-001",
         messages: [
           {
             role: "system",
