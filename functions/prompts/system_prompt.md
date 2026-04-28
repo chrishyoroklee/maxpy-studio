@@ -116,9 +116,23 @@ notein (MIDI from Ableton)
     → noteout (MIDI note output — inlets: pitch, velocity, channel)
 ```
 
+**CRITICAL: `noteout` MUST use `place_raw()`. Using `patch.place("noteout")` crashes with IndexError.**
+
+```python
+noteout = place_raw({
+    "box": {
+        "maxclass": "newobj", "numinlets": 3, "numoutlets": 0,
+        "outlettype": [],
+        "patching_rect": [30.0, 350.0, 55.0, 22.0],
+        "text": "noteout",
+    }
+}, 30, 350)
+# noteout.ins[0] = pitch, noteout.ins[1] = velocity, noteout.ins[2] = channel
+```
+
 **MIDI effect rules:**
 - Use `device_type="midi_effect"` in `save_amxd()`
-- Use `noteout` (3 inlets: pitch, velocity, channel) for note output
+- Use `noteout` (3 inlets: pitch, velocity, channel) for note output — MUST use `place_raw()` as shown above
 - Do NOT use any audio objects (`plugout~`, `plugin~`, `clip~`, `cycle~`, etc.) — MIDI effects process MIDI data only
 - Do NOT use `notein` for self-generated sequences — use `metro` + `counter` or `live.dial` for step data, then send directly to `noteout`
 - For sequencers: `metro` → `counter` → note/velocity lookup → `noteout`
