@@ -1,4 +1,5 @@
 import type { MaxPatJson, BoxJson, PatchLineJson } from "./maxpatExtractor";
+import type { DeviceType } from "./deviceClassifier";
 
 export type ValidationSeverity = "error" | "warning" | "info";
 
@@ -29,7 +30,7 @@ function boxName(box: BoxJson): string {
   return boxText(box).split(/\s+/)[0];
 }
 
-export function validatePatch(maxpat: MaxPatJson): ValidationResult {
+export function validatePatch(maxpat: MaxPatJson, deviceType?: DeviceType): ValidationResult {
   const issues: ValidationIssue[] = [];
   const patcher = maxpat.patcher;
   const boxes = patcher.boxes ?? [];
@@ -56,16 +57,43 @@ export function validatePatch(maxpat: MaxPatJson): ValidationResult {
     return { issues, passed: false };
   }
 
-  // 2. NO_OUTPUT
+  // 2. NO_OUTPUT — device-type-aware
   const hasPlugout = [...boxMap.values()].some((b) => boxText(b).includes("plugout~"));
   const hasMidiout = [...boxMap.values()].some((b) => boxText(b).includes("midiout"));
   const hasNoteout = [...boxMap.values()].some((b) => boxText(b).includes("noteout"));
-  if (!hasPlugout && !hasMidiout && !hasNoteout) {
-    issues.push({
-      severity: "error",
-      code: "NO_OUTPUT",
-      message: "No output object found (plugout~, midiout, or noteout).",
-    });
+
+  if (deviceType === "midi_effect") {
+    if (!hasNoteout && !hasMidiout) {
+      issues.push({
+        severity: "error",
+        code: "NO_OUTPUT",
+        message: "MIDI effect requires noteout or midiout for output, but none found.",
+      });
+    }
+    if (hasPlugout) {
+      issues.push({
+        severity: "warning",
+        code: "WRONG_OUTPUT_TYPE",
+        message: "MIDI effect should use noteout, not plugout~. Audio output objects are not needed.",
+      });
+    }
+  } else if (deviceType === "instrument" || deviceType === "audio_effect") {
+    if (!hasPlugout) {
+      issues.push({
+        severity: "error",
+        code: "NO_OUTPUT",
+        message: `${deviceType === "instrument" ? "Instrument" : "Audio effect"} requires plugout~ for audio output, but none found.`,
+      });
+    }
+  } else {
+    // No deviceType — generic fallback (backward compatible)
+    if (!hasPlugout && !hasMidiout && !hasNoteout) {
+      issues.push({
+        severity: "error",
+        code: "NO_OUTPUT",
+        message: "No output object found (plugout~, midiout, or noteout).",
+      });
+    }
   }
 
   // Iterate patchlines once for connection checks
@@ -147,8 +175,8 @@ export function validatePatch(maxpat: MaxPatJson): ValidationResult {
 
   // --- Warnings ---
 
-  // 5. NO_CLIP_BEFORE_OUTPUT
-  if (hasPlugout) {
+  // 5. NO_CLIP_BEFORE_OUTPUT — only relevant for audio devices
+  if (hasPlugout && deviceType !== "midi_effect") {
     const hasClip = [...boxMap.values()].some((b) => boxText(b).startsWith("clip~"));
     if (!hasClip) {
       issues.push({

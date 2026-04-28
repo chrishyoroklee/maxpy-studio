@@ -1,3 +1,5 @@
+import type { DeviceType } from "./deviceClassifier";
+
 const ALLOWED_IMPORTS = /^(?:import maxpylang|from maxpylang[\s.].*|import maxpylang\s+as\s+\w+|import json|from amxd\s+import.*|import struct|import numpy|from numpy.*)$/;
 
 const DANGEROUS_PATTERNS = [
@@ -34,7 +36,7 @@ export function extractSummary(llmResponse: string): string | undefined {
   return match ? match[1].trim() : undefined;
 }
 
-export function extractCode(llmResponse: string): string {
+export function extractCode(llmResponse: string, deviceType?: DeviceType): string {
   const pattern = /```python\s*\n([\s\S]*?)```/g;
   const matches: string[] = [];
   let match;
@@ -50,11 +52,11 @@ export function extractCode(llmResponse: string): string {
 
   const code = matches.reduce((a, b) => (a.length >= b.length ? a : b)).trim();
 
-  validate(code);
+  validate(code, deviceType);
   return code;
 }
 
-function validate(code: string): void {
+function validate(code: string, deviceType?: DeviceType): void {
   for (const line of code.split("\n")) {
     const stripped = line.trim();
     if (stripped.startsWith("import ") || stripped.startsWith("from ")) {
@@ -83,8 +85,22 @@ function validate(code: string): void {
     throw new ExtractionError("Generated code does not create a MaxPatch.");
   }
 
-  if (!code.includes("plugout~") && !code.includes("midiout") && !code.includes("noteout")) {
-    throw new ExtractionError("Generated code has no M4L output (plugout~, midiout, or noteout).");
+  if (deviceType === "midi_effect") {
+    if (!code.includes("noteout") && !code.includes("midiout")) {
+      throw new ExtractionError(
+        "MIDI effect code must use noteout or midiout for output, not plugout~."
+      );
+    }
+  } else if (deviceType === "instrument" || deviceType === "audio_effect") {
+    if (!code.includes("plugout~")) {
+      throw new ExtractionError(
+        `${deviceType === "instrument" ? "Instrument" : "Audio effect"} code must use plugout~ for output.`
+      );
+    }
+  } else {
+    if (!code.includes("plugout~") && !code.includes("midiout") && !code.includes("noteout")) {
+      throw new ExtractionError("Generated code has no M4L output (plugout~, midiout, or noteout).");
+    }
   }
 
   if (!code.includes(".save(") && !code.includes("save_amxd")) {
