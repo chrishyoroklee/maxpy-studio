@@ -83,8 +83,8 @@ function validate(code: string): void {
     throw new ExtractionError("Generated code does not create a MaxPatch.");
   }
 
-  if (!code.includes("plugout~") && !code.includes("midiout")) {
-    throw new ExtractionError("Generated code has no M4L output (plugout~ or midiout).");
+  if (!code.includes("plugout~") && !code.includes("midiout") && !code.includes("noteout")) {
+    throw new ExtractionError("Generated code has no M4L output (plugout~, midiout, or noteout).");
   }
 
   if (!code.includes(".save(") && !code.includes("save_amxd")) {

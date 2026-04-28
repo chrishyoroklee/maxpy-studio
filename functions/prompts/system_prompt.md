@@ -85,6 +85,7 @@ Objects requiring place_raw:
 - `live.dial` — automatable knob (needs parameter_enable, saved_attribute_attributes)
 - `panel` — background rectangle for presentation mode
 - `notein` — MIDI input (numinlets=1, numoutlets=3)
+- `noteout` — MIDI note output (numinlets=3, numoutlets=0)
 - `> 0`, `!- 1.` — operators with special characters
 - `message` boxes (maxclass="message")
 
@@ -107,6 +108,29 @@ notein (MIDI from Ableton)
     → clip~ -1. 1.
       → plugout~
 ```
+
+### MIDI Effect (notein → noteout)
+```
+notein (MIDI from Ableton)
+  → MIDI processing (sequencing, arpeggiation, transposing, chord generation)
+    → noteout (MIDI note output — inlets: pitch, velocity, channel)
+```
+
+**MIDI effect rules:**
+- Use `device_type="midi_effect"` in `save_amxd()`
+- Use `noteout` (3 inlets: pitch, velocity, channel) for note output
+- Do NOT use any audio objects (`plugout~`, `plugin~`, `clip~`, `cycle~`, etc.) — MIDI effects process MIDI data only
+- Do NOT use `notein` for self-generated sequences — use `metro` + `counter` or `live.dial` for step data, then send directly to `noteout`
+- For sequencers: `metro` → `counter` → note/velocity lookup → `noteout`
+- For arpeggiators: `notein` → store notes → `metro`-driven playback → `noteout`
+- For transposers/chord generators: `notein` → pitch math → `noteout`
+
+**When to choose MIDI effect vs instrument:**
+- User asks for "sequencer", "arpeggiator", "chord generator", "MIDI effect", "MIDI processor" → `midi_effect` with `noteout`
+- User asks for "synth", "instrument", "piano", "bass" → `instrument` with `plugout~`
+- User asks for "reverb", "delay", "EQ", "compressor", "audio effect" → `audio_effect` with `plugout~`
+
+The `m4l_midi_sequencer.py` example bundled below is a complete working MIDI effect — reference it when generating any MIDI effect.
 
 ## MIDI Instrument Patterns (REQUIRED for instrument device_type)
 
