@@ -2,7 +2,8 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { streamLLM, RateLimitError } from "../api/client";
 import { extractCode, extractDescription, extractSummary, ExtractionError } from "../lib/extractor";
 import { rewriteSavePaths } from "../lib/pathRewriter";
-import { fetchTemplateCode } from "../lib/templates";
+import { fetchTemplateCode, TEMPLATES } from "../lib/templates";
+import { classifyDeviceType, type DeviceType } from "../lib/deviceClassifier";
 import {
   savePrompt,
   saveGeneration,
@@ -198,6 +199,15 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       // Log prompt (fire and forget)
       const promptId = await savePrompt({ prompt, model, templateUsed: template, pluginId: pluginId || undefined }).catch(() => "");
 
+      // Classify device type
+      let deviceType: DeviceType = "audio_effect";
+      if (template) {
+        const tmpl = TEMPLATES.find(t => t.name === template);
+        if (tmpl) deviceType = tmpl.type;
+      } else {
+        deviceType = classifyDeviceType(prompt);
+      }
+
       // Log prompt analysis data
       const trimmed = prompt.trim();
       const wordCount = trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length;
@@ -208,6 +218,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
         isFollowUp: history.length > 0,
         pluginId: pluginId || undefined,
         model,
+        deviceType,
       });
 
       const assistantId = assistantMsg.id;
@@ -253,9 +264,14 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           // Phase 1: Stream LLM response (accumulate but don't show in UI)
           let fullResponse = "";
           let streamError = false;
-          for await (const event of streamLLM(currentPrompt, model, currentHistory, attempt === 0 ? template : undefined, attempt === 0 ? templateCode : undefined, abortController.signal)) {
+          for await (const event of streamLLM(currentPrompt, model, currentHistory, attempt === 0 ? template : undefined, attempt === 0 ? templateCode : undefined, abortController.signal, deviceType)) {
             if (event.type === "chunk") {
               fullResponse += event.content || "";
+            } else if (event.type === "deviceType") {
+              const serverType = event.content as DeviceType;
+              if (serverType === "audio_effect" || serverType === "instrument" || serverType === "midi_effect") {
+                deviceType = serverType;
+              }
             } else if (event.type === "error") {
               setMessages((prev) =>
                 prev.map((m) =>
@@ -271,7 +287,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           // Phase 2: Extract code
           let code: string;
           try {
-            code = extractCode(fullResponse);
+            code = extractCode(fullResponse, deviceType);
           } catch (err) {
             const msg = err instanceof ExtractionError ? err.message : "Code extraction failed";
             lastCode = "";
@@ -320,7 +336,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
             let warnings: ValidationIssue[] | undefined;
             try {
               const maxpat = extractMaxpat(result.amxdBytes);
-              const validationResult = validatePatch(maxpat);
+              const validationResult = validatePatch(maxpat, deviceType);
               warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
               patchData = parsePatchGraph(maxpat);
               if (isM4LMode()) sendToMax(maxpat);
@@ -485,9 +501,12 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
         templateName: templateName,
         pluginId: pluginId || undefined,
         model,
+        deviceType: (TEMPLATES.find(t => t.name === templateName))?.type ?? "audio_effect",
       });
 
       const assistantId = assistantMsg.id;
+      const tmpl = TEMPLATES.find(t => t.name === templateName);
+      const deviceType: DeviceType = tmpl?.type ?? "audio_effect";
 
       try {
         const code = await fetchTemplateCode(templateName);
@@ -506,7 +525,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           let warnings: ValidationIssue[] | undefined;
           try {
             const maxpat = extractMaxpat(result.amxdBytes);
-            const validationResult = validatePatch(maxpat);
+            const validationResult = validatePatch(maxpat, deviceType);
             warnings = validationResult.issues.length > 0 ? validationResult.issues : undefined;
             patchData = parsePatchGraph(maxpat);
             // In M4L mode, send the patcher to Max for inline loading
