@@ -90,7 +90,8 @@ async function classifyDeviceType(
     });
 
     if (!response.ok) {
-      console.warn("Classification call failed:", response.status);
+      const errBody = await response.text().catch(() => "");
+      console.warn(`Classification call failed: ${response.status} ${errBody}`);
       return "audio_effect";
     }
 
@@ -276,10 +277,11 @@ export const generateCode = onRequest(
     res.setHeader("Connection", "keep-alive");
 
     // Resolve device type: use client-provided for templates, classify for free-form
+    console.log(`[route] body.deviceType="${body.deviceType}" body.template="${body.template}"`);
     let deviceType: DeviceType | undefined = undefined;
     if (body.deviceType && VALID_DEVICE_TYPES.has(body.deviceType as DeviceType)) {
       deviceType = body.deviceType as DeviceType;
-      console.log(`[route] client-provided deviceType="${deviceType}"`);
+      console.log(`[route] using client-provided deviceType="${deviceType}"`);
     }
 
     const isTemplate = !!body.template;
