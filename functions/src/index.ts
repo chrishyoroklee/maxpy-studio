@@ -96,7 +96,9 @@ async function classifyDeviceType(
 
     const data = await response.json();
     const raw = (data.choices?.[0]?.message?.content ?? "").trim().toLowerCase() as DeviceType;
-    return VALID_DEVICE_TYPES.has(raw) ? raw : "audio_effect";
+    const result = VALID_DEVICE_TYPES.has(raw) ? raw : "audio_effect";
+    console.log(`[classify] prompt="${prompt.slice(0, 80)}" raw="${raw}" result="${result}"`);
+    return result;
   } catch (err) {
     console.warn("Classification error, defaulting to audio_effect:", err);
     return "audio_effect";
@@ -170,6 +172,8 @@ function buildSystemPrompt(deviceType?: DeviceType, isTemplate?: boolean): strin
     ? allExamples.filter(e => e.deviceType === deviceType || e.deviceType === "")
     : allExamples;
 
+  console.log(`[prompt] deviceType=${deviceType ?? "none"} isTemplate=${isTemplate ?? false} examples=[${examples.map(e => e.name).join(", ")}]`);
+
   for (const example of examples) {
     system += `\n\n## Complete Example: ${example.name}\n\`\`\`python\n${example.code}\`\`\`\n`;
   }
@@ -178,6 +182,7 @@ function buildSystemPrompt(deviceType?: DeviceType, isTemplate?: boolean): strin
     system = buildDynamicPrompt(system, deviceType, isTemplate ?? false);
   }
 
+  console.log(`[prompt] final length=${system.length} chars`);
   return system;
 }
 
@@ -274,14 +279,18 @@ export const generateCode = onRequest(
     let deviceType: DeviceType | undefined = undefined;
     if (body.deviceType && VALID_DEVICE_TYPES.has(body.deviceType as DeviceType)) {
       deviceType = body.deviceType as DeviceType;
+      console.log(`[route] client-provided deviceType="${deviceType}"`);
     }
 
     const isTemplate = !!body.template;
 
     // For free-form prompts without a client deviceType, classify with LLM
     if (!deviceType && !isTemplate) {
+      console.log(`[route] classifying prompt: "${body.prompt.slice(0, 100)}"`);
       deviceType = await classifyDeviceType(body.prompt, openrouterApiKey.value());
     }
+
+    console.log(`[route] resolved deviceType="${deviceType}" isTemplate=${isTemplate} model="${body.model}"`);
 
     // Emit deviceType SSE event early so the frontend can use it for validation
     if (deviceType) {
