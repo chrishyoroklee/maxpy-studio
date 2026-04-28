@@ -8,7 +8,7 @@ const GENERATE_URL = FUNCTIONS_BASE.includes("generatecode") || FUNCTIONS_BASE.i
   : `${FUNCTIONS_BASE}/generateCode`;
 
 export interface GenerateEvent {
-  type: "chunk" | "error" | "done";
+  type: "chunk" | "error" | "done" | "deviceType";
   content?: string;
 }
 
@@ -33,10 +33,12 @@ export async function* streamLLM(
   template?: string,
   templateCode?: string,
   signal?: AbortSignal,
+  deviceType?: string,
 ): AsyncGenerator<GenerateEvent> {
   const body: Record<string, unknown> = { prompt, model, messages };
   if (template) body.template = template;
   if (templateCode) body.templateCode = templateCode;
+  if (deviceType) body.deviceType = deviceType;
 
   // Send auth token for server-side uid verification + rate limiting
   const headers: Record<string, string> = { "Content-Type": "application/json" };
