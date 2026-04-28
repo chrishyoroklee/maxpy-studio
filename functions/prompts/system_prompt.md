@@ -93,6 +93,7 @@ All raw dicts MUST include a `"text"` field (even UI objects — use the maxclas
 
 ## Audio Plugin Rules
 
+<!-- DEVICE_TYPE:audio_effect:START -->
 ### Audio Effect (plugin~ → plugout~)
 ```
 plugin~ (stereo in from Ableton)
@@ -100,7 +101,9 @@ plugin~ (stereo in from Ableton)
     → clip~ -1. 1. (ALWAYS before output)
       → plugout~ (stereo out to Ableton)
 ```
+<!-- DEVICE_TYPE:audio_effect:END -->
 
+<!-- DEVICE_TYPE:instrument:START -->
 ### Instrument (notein → plugout~)
 ```
 notein (MIDI from Ableton)
@@ -108,7 +111,9 @@ notein (MIDI from Ableton)
     → clip~ -1. 1.
       → plugout~
 ```
+<!-- DEVICE_TYPE:instrument:END -->
 
+<!-- DEVICE_TYPE:midi_effect:START -->
 ### MIDI Effect (notein → noteout)
 ```
 notein (MIDI from Ableton)
@@ -138,6 +143,7 @@ noteout = place_raw({
 - For sequencers: `metro` → `counter` → note/velocity lookup → `noteout`
 - For arpeggiators: `notein` → store notes → `metro`-driven playback → `noteout`
 - For transposers/chord generators: `notein` → pitch math → `noteout`
+<!-- DEVICE_TYPE:midi_effect:END -->
 
 **When to choose MIDI effect vs instrument:**
 - User asks for "sequencer", "arpeggiator", "chord generator", "MIDI effect", "MIDI processor" → `midi_effect` with `noteout`
@@ -146,6 +152,7 @@ noteout = place_raw({
 
 The `m4l_midi_sequencer.py` example bundled below is a complete working MIDI effect — reference it when generating any MIDI effect.
 
+<!-- DEVICE_TYPE:instrument:START -->
 ## MIDI Instrument Patterns (REQUIRED for instrument device_type)
 
 When generating a Max for Live **instrument**, you MUST use these patterns. They are the difference between a usable synth and one with stuck notes, no velocity sensitivity, and broken envelopes.
@@ -294,6 +301,7 @@ for i in range(4):
 7. **Polyphony requires multiple voice chains** — use `poly N 1` + `route` + parallel voice chains. A single `cycle~` + single `adsr~` is inherently mono no matter what MIDI input pattern you use.
 
 The `m4l_mono_synth.py`, `m4l_bass_synth.py`, and `m4l_rhodes_piano.py` examples bundled below are complete, tested exemplars of these patterns — reference them when generating any instrument.
+<!-- DEVICE_TYPE:instrument:END -->
 
 ### I/O substitutions from regular Max
 - `ezdac~` → `plugout~` (audio out)
