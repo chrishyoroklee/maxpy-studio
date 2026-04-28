@@ -84,11 +84,15 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
   const templateUsedRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Load existing messages when pluginId changes
   useEffect(() => {
     if (!pluginId) {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
       setMessages([]);
+      setIsLoading(false);
       setHistoryLoaded(false);
       templateUsedRef.current = null;
       return;
@@ -182,6 +186,10 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsLoading(true);
 
+      abortControllerRef.current?.abort();
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
       // Save user message to Firestore
       if (pluginId) {
         saveMessage(pluginId, { role: "user", content: prompt }).catch((e) => console.warn("Failed to save user message:", e));
@@ -245,7 +253,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           // Phase 1: Stream LLM response (accumulate but don't show in UI)
           let fullResponse = "";
           let streamError = false;
-          for await (const event of streamLLM(currentPrompt, model, currentHistory, attempt === 0 ? template : undefined, attempt === 0 ? templateCode : undefined)) {
+          for await (const event of streamLLM(currentPrompt, model, currentHistory, attempt === 0 ? template : undefined, attempt === 0 ? templateCode : undefined, abortController.signal)) {
             if (event.type === "chunk") {
               fullResponse += event.content || "";
             } else if (event.type === "error") {
@@ -424,6 +432,7 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           }
         } // end retry loop
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         const isRateLimited = err instanceof RateLimitError;
         const errorMsg = err instanceof Error ? err.message : "Unknown error";
         setMessages((prev) =>
@@ -434,7 +443,10 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           )
         );
       } finally {
-        setIsLoading(false);
+        if (abortControllerRef.current === abortController) {
+          setIsLoading(false);
+          abortControllerRef.current = null;
+        }
       }
     },
     [runCode, pluginId]
@@ -446,6 +458,10 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       const assistantMsg: ChatMessage = { id: nextId(), role: "assistant", content: "", status: "creating" };
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsLoading(true);
+
+      abortControllerRef.current?.abort();
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
       if (pluginId) {
         saveMessage(pluginId, { role: "user", content: userMsg.content }).catch((e) => console.warn("Failed to save user message:", e));
@@ -476,6 +492,8 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
       try {
         const code = await fetchTemplateCode(templateName);
         const rewritten = rewriteSavePaths(code);
+
+        if (abortController.signal.aborted) return;
 
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, status: "running" as const } : m))
@@ -566,19 +584,26 @@ export function useChat(runCode: RunCodeFn, pluginId: string | null) {
           }
         }
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         const errorMsg = err instanceof Error ? err.message : "Template build failed";
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, error: errorMsg, status: "error" } : m))
         );
       } finally {
-        setIsLoading(false);
+        if (abortControllerRef.current === abortController) {
+          setIsLoading(false);
+          abortControllerRef.current = null;
+        }
       }
     },
     [runCode, pluginId]
   );
 
   const clearMessages = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setMessages([]);
+    setIsLoading(false);
     templateUsedRef.current = null;
   }, []);
 

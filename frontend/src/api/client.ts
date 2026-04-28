@@ -32,6 +32,7 @@ export async function* streamLLM(
   messages: { role: string; content: string }[] = [],
   template?: string,
   templateCode?: string,
+  signal?: AbortSignal,
 ): AsyncGenerator<GenerateEvent> {
   const body: Record<string, unknown> = { prompt, model, messages };
   if (template) body.template = template;
@@ -46,6 +47,7 @@ export async function* streamLLM(
     method: "POST",
     headers,
     body: JSON.stringify(body),
+    signal,
   });
 
   if (response.status === 429) {
