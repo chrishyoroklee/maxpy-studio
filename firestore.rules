@@ -12,6 +12,7 @@ service cloud.firestore {
       allow delete: if false;
 
       match /plugins/{pluginId} {
+        allow read: if request.auth.uid in ["PPnxvAX9yIbqGTWtUPWUmYXvKBm2", "kU8Jm1Ubh1b4ikC9DQjY3ga0g4J2", "QPOaRxnLdBZCmO9RENmhzdfmuzz1", "94QSjmXHwEhrTHudkoimyJAsiJ43"];
         allow read, create, update: if request.auth != null && request.auth.uid == userId;
         allow delete: if request.auth != null && request.auth.uid == userId;
 
@@ -22,6 +23,7 @@ service cloud.firestore {
       }
 
       match /prompts/{promptId} {
+        allow read: if request.auth.uid in ["PPnxvAX9yIbqGTWtUPWUmYXvKBm2", "kU8Jm1Ubh1b4ikC9DQjY3ga0g4J2", "QPOaRxnLdBZCmO9RENmhzdfmuzz1", "94QSjmXHwEhrTHudkoimyJAsiJ43"];
         allow read, create: if request.auth != null && request.auth.uid == userId;
         allow update, delete: if request.auth != null && request.auth.uid == userId;
       }
