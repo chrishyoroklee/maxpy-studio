@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchAdminStats, type AdminStats } from "../lib/adminQueries";
+import { UserJourneys } from "./UserJourneys";
 
 function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
@@ -30,7 +31,10 @@ function StatCard({ label, value, sub }: StatCardProps) {
   );
 }
 
+type AdminTab = "stats" | "journeys";
+
 export function AdminDashboard() {
+  const [tab, setTab] = useState<AdminTab>("stats");
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,17 +80,31 @@ export function AdminDashboard() {
       <div className="admin-header">
         <h2>Research Dashboard</h2>
         <div className="admin-header-right">
-          {lastUpdated && (
+          {lastUpdated && tab === "stats" && (
             <span className="admin-timestamp">
               Updated {lastUpdated.toLocaleTimeString()}
             </span>
           )}
-          <button className="admin-refresh" onClick={refresh} disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
-          </button>
+          {tab === "stats" && (
+            <button className="admin-refresh" onClick={refresh} disabled={loading}>
+              {loading ? "Loading..." : "Refresh"}
+            </button>
+          )}
         </div>
       </div>
 
+      <div className="admin-tabs">
+        <button className={tab === "stats" ? "admin-tab-active" : ""} onClick={() => setTab("stats")}>
+          Overview
+        </button>
+        <button className={tab === "journeys" ? "admin-tab-active" : ""} onClick={() => setTab("journeys")}>
+          User Journeys
+        </button>
+      </div>
+
+      {tab === "journeys" && <UserJourneys />}
+
+      {tab === "stats" && <>
       {/* Overview */}
       <div className="admin-section">
         <div className="admin-section-title">Overview</div>
@@ -152,6 +170,7 @@ export function AdminDashboard() {
           <StatCard label="Validation Expanded" value={stats.validationExpandCount} />
         </div>
       </div>
+      </>}
     </div>
   );
 }
