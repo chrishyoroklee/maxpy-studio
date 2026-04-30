@@ -9,11 +9,6 @@ import {
 import { db } from "./firebase";
 import { isAdmin } from "./admins";
 
-function isNonAdminEvent(doc: QueryDocumentSnapshot): boolean {
-  const uid = doc.ref.parent.parent?.id;
-  return !isAdmin(uid);
-}
-
 interface UserViewStats {
   uid: string;
   email: string;
