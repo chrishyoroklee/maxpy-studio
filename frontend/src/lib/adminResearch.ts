@@ -29,6 +29,19 @@ interface UserViewStats {
   avgAttemptsToSuccess: number;
 }
 
+export interface TemporalStats {
+  graphAfterSuccess: number;
+  graphAfterFailure: number;
+  graphNoContext: number;
+  graphAfterSuccessPct: number;
+  graphAfterFailurePct: number;
+  codeAfterSuccess: number;
+  codeAfterFailure: number;
+  codeNoContext: number;
+  codeAfterSuccessPct: number;
+  codeAfterFailurePct: number;
+}
+
 export interface ResearchStats {
   totalUsersWithPrompts: number;
 
@@ -65,6 +78,9 @@ export interface ResearchStats {
   avgAttempts_nonGraphViewers: number;
   avgAttempts_codeViewers: number;
   avgAttempts_nonCodeViewers: number;
+
+  // Temporal analysis
+  temporal: TemporalStats;
 
   // Per-user table
   users: UserViewStats[];
@@ -190,6 +206,61 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
     });
   }
 
+  // Temporal analysis: do view opens follow successes or failures?
+  let graphAfterSuccess = 0, graphAfterFailure = 0, graphNoContext = 0;
+  let codeAfterSuccess = 0, codeAfterFailure = 0, codeNoContext = 0;
+
+  for (const u of Object.values(byUser)) {
+    const allEvents = [
+      ...u.viewOpens.map(e => ({ ...e, _type: "view_open" as const })),
+      ...u.genSuccess.map(e => ({ ...e, _type: "generation_success" as const })),
+      ...u.genFail.map(e => ({ ...e, _type: "generation_failure" as const })),
+    ];
+
+    allEvents.sort((a, b) => {
+      const ta = a.createdAt instanceof Object && "toMillis" in (a.createdAt as Record<string, unknown>)
+        ? (a.createdAt as { toMillis: () => number }).toMillis()
+        : new Date(a.createdAt as string).getTime();
+      const tb = b.createdAt instanceof Object && "toMillis" in (b.createdAt as Record<string, unknown>)
+        ? (b.createdAt as { toMillis: () => number }).toMillis()
+        : new Date(b.createdAt as string).getTime();
+      return ta - tb;
+    });
+
+    for (let i = 0; i < allEvents.length; i++) {
+      const e = allEvents[i];
+      if (e._type !== "view_open") continue;
+
+      let foundGen: string | null = null;
+      for (let j = i - 1; j >= 0; j--) {
+        const prev = allEvents[j];
+        if (prev._type === "generation_success" || prev._type === "generation_failure") {
+          const tCurr = e.createdAt instanceof Object && "toMillis" in (e.createdAt as Record<string, unknown>)
+            ? (e.createdAt as { toMillis: () => number }).toMillis()
+            : new Date(e.createdAt as string).getTime();
+          const tPrev = prev.createdAt instanceof Object && "toMillis" in (prev.createdAt as Record<string, unknown>)
+            ? (prev.createdAt as { toMillis: () => number }).toMillis()
+            : new Date(prev.createdAt as string).getTime();
+          if (tCurr - tPrev <= 120000) foundGen = prev._type;
+          break;
+        }
+      }
+
+      if (e.view === "patch") {
+        if (!foundGen) graphNoContext++;
+        else if (foundGen === "generation_success") graphAfterSuccess++;
+        else graphAfterFailure++;
+      } else if (e.view === "code") {
+        if (!foundGen) codeNoContext++;
+        else if (foundGen === "generation_success") codeAfterSuccess++;
+        else codeAfterFailure++;
+      }
+    }
+  }
+
+  const totalGraphTemporal = graphAfterSuccess + graphAfterFailure;
+  const totalCodeTemporal = codeAfterSuccess + codeAfterFailure;
+
   users.sort((a, b) => b.promptCount - a.promptCount);
 
   const withGraph = users.filter(u => u.viewedGraph);
@@ -233,6 +304,19 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
     avgAttempts_nonGraphViewers: avg(noGraph.filter(u => u.avgAttemptsToSuccess > 0).map(u => u.avgAttemptsToSuccess)),
     avgAttempts_codeViewers: avg(withCode.filter(u => u.avgAttemptsToSuccess > 0).map(u => u.avgAttemptsToSuccess)),
     avgAttempts_nonCodeViewers: avg(noCode.filter(u => u.avgAttemptsToSuccess > 0).map(u => u.avgAttemptsToSuccess)),
+
+    temporal: {
+      graphAfterSuccess,
+      graphAfterFailure,
+      graphNoContext,
+      graphAfterSuccessPct: totalGraphTemporal > 0 ? graphAfterSuccess / totalGraphTemporal : 0,
+      graphAfterFailurePct: totalGraphTemporal > 0 ? graphAfterFailure / totalGraphTemporal : 0,
+      codeAfterSuccess,
+      codeAfterFailure,
+      codeNoContext,
+      codeAfterSuccessPct: totalCodeTemporal > 0 ? codeAfterSuccess / totalCodeTemporal : 0,
+      codeAfterFailurePct: totalCodeTemporal > 0 ? codeAfterFailure / totalCodeTemporal : 0,
+    },
 
     users,
   };

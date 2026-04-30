@@ -3833,6 +3833,30 @@ textarea:focus-visible {
 .rs-yes { color: var(--success); }
 .rs-no { color: var(--text-muted); }
 
+.rs-insight {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.rs-insight strong { color: var(--text-primary); }
+
+.rs-finding {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--accent-muted);
+  border: 1px solid var(--border-accent);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.rs-finding strong { color: var(--text-accent); }
+
+.rs-muted { color: var(--text-muted); }
+
 .rs-loading, .rs-error {
   text-align: center;
   padding: 60px 20px;

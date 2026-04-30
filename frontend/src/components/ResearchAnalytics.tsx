@@ -201,6 +201,86 @@ export function ResearchAnalytics() {
         </div>
       </div>
 
+      {/* Temporal Analysis */}
+      <div className="rs-section">
+        <div className="rs-section-title">
+          Temporal Analysis: When do users open views?
+        </div>
+        <p className="rs-insight">
+          Do users inspect the graph/code to <strong>understand successful outputs</strong> or
+          to <strong>debug failures</strong>? For each view_open event, we check
+          whether the preceding generation (within 2 min) was a success or failure.
+        </p>
+
+        <div className="rs-table-group">
+          <h4>Graph View Opens</h4>
+          <table className="rs-table">
+            <thead>
+              <tr>
+                <th>Context</th>
+                <th>Count</th>
+                <th>% of Contextual</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>After successful generation</td>
+                <td>{stats.temporal.graphAfterSuccess}</td>
+                <td className="rs-yes">{pct(stats.temporal.graphAfterSuccessPct)}</td>
+              </tr>
+              <tr>
+                <td>After failed generation</td>
+                <td>{stats.temporal.graphAfterFailure}</td>
+                <td className="rs-no">{pct(stats.temporal.graphAfterFailurePct)}</td>
+              </tr>
+              <tr>
+                <td className="rs-muted">No recent generation (browsing)</td>
+                <td className="rs-muted">{stats.temporal.graphNoContext}</td>
+                <td className="rs-muted">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="rs-table-group">
+          <h4>Code View Opens</h4>
+          <table className="rs-table">
+            <thead>
+              <tr>
+                <th>Context</th>
+                <th>Count</th>
+                <th>% of Contextual</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>After successful generation</td>
+                <td>{stats.temporal.codeAfterSuccess}</td>
+                <td className="rs-yes">{pct(stats.temporal.codeAfterSuccessPct)}</td>
+              </tr>
+              <tr>
+                <td>After failed generation</td>
+                <td>{stats.temporal.codeAfterFailure}</td>
+                <td className="rs-no">{pct(stats.temporal.codeAfterFailurePct)}</td>
+              </tr>
+              <tr>
+                <td className="rs-muted">No recent generation (browsing)</td>
+                <td className="rs-muted">{stats.temporal.codeNoContext}</td>
+                <td className="rs-muted">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="rs-finding">
+          <strong>Finding:</strong> {pct(stats.temporal.graphAfterSuccessPct)} of
+          graph opens and {pct(stats.temporal.codeAfterSuccessPct)} of code opens
+          follow a successful generation — users primarily use these views
+          as <strong>comprehension tools</strong> to understand and verify outputs,
+          not to debug failures.
+        </div>
+      </div>
+
       {/* Per-user table */}
       <div className="rs-section">
         <div className="rs-section-title rs-toggle" onClick={() => setShowTable(!showTable)}>
