@@ -35,7 +35,7 @@ function StatCard({ label, value, sub }: StatCardProps) {
 type AdminTab = "stats" | "journeys" | "research";
 
 export function AdminDashboard() {
-  const [tab, setTab] = useState<AdminTab>("stats");
+  const [tab, setTab] = useState<AdminTab>("research");
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,14 +95,14 @@ export function AdminDashboard() {
       </div>
 
       <div className="admin-tabs">
+        <button className={tab === "research" ? "admin-tab-active" : ""} onClick={() => setTab("research")}>
+          Research
+        </button>
         <button className={tab === "stats" ? "admin-tab-active" : ""} onClick={() => setTab("stats")}>
           Overview
         </button>
         <button className={tab === "journeys" ? "admin-tab-active" : ""} onClick={() => setTab("journeys")}>
           User Journeys
-        </button>
-        <button className={tab === "research" ? "admin-tab-active" : ""} onClick={() => setTab("research")}>
-          Research
         </button>
       </div>
 
