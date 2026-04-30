@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { fetchAdminStats, type AdminStats } from "../lib/adminQueries";
 import { UserJourneys } from "./UserJourneys";
+import { ResearchAnalytics } from "./ResearchAnalytics";
 
 function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
@@ -31,7 +32,7 @@ function StatCard({ label, value, sub }: StatCardProps) {
   );
 }
 
-type AdminTab = "stats" | "journeys";
+type AdminTab = "stats" | "journeys" | "research";
 
 export function AdminDashboard() {
   const [tab, setTab] = useState<AdminTab>("stats");
@@ -100,9 +101,13 @@ export function AdminDashboard() {
         <button className={tab === "journeys" ? "admin-tab-active" : ""} onClick={() => setTab("journeys")}>
           User Journeys
         </button>
+        <button className={tab === "research" ? "admin-tab-active" : ""} onClick={() => setTab("research")}>
+          Research
+        </button>
       </div>
 
       {tab === "journeys" && <UserJourneys />}
+      {tab === "research" && <ResearchAnalytics />}
 
       {tab === "stats" && <>
       {/* Overview */}

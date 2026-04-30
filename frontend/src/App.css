@@ -3724,3 +3724,120 @@ textarea:focus-visible {
 }
 
 .uj-error { color: var(--error, #f87171); }
+
+/* ==================== Research Analytics ==================== */
+
+.rs-container { padding: 0 4px; }
+
+.rs-section {
+  margin-bottom: 28px;
+}
+
+.rs-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.rs-summary {
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.rs-big {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-right: 6px;
+}
+
+.rs-table-group {
+  margin-bottom: 20px;
+}
+
+.rs-table-group h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+}
+
+.rs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.rs-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-default);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rs-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.rs-table tbody tr:hover {
+  background: var(--bg-elevated);
+}
+
+.rs-diff { font-weight: 600; font-size: 12px; }
+.rs-diff-higher { color: var(--success); }
+.rs-diff-lower { color: var(--error); }
+.rs-diff-same { color: var(--text-muted); }
+
+.rs-toggle {
+  cursor: pointer;
+  user-select: none;
+}
+
+.rs-toggle:hover { color: var(--text-accent); }
+
+.rs-arrow {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 11px;
+  transition: transform 0.15s;
+}
+
+.rs-arrow-open { transform: rotate(90deg); }
+
+.rs-user-table-wrap {
+  overflow-x: auto;
+  margin-top: 8px;
+}
+
+.rs-table-users td, .rs-table-users th {
+  white-space: nowrap;
+  padding: 6px 10px;
+}
+
+.rs-email {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rs-yes { color: var(--success); }
+.rs-no { color: var(--text-muted); }
+
+.rs-loading, .rs-error {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.rs-error { color: var(--error, #f87171); }
