@@ -210,22 +210,23 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
   let graphAfterSuccess = 0, graphAfterFailure = 0, graphNoContext = 0;
   let codeAfterSuccess = 0, codeAfterFailure = 0, codeNoContext = 0;
 
+  type TaggedEvent = EventData & { _type: "view_open" | "generation_success" | "generation_failure" };
+
+  function toMs(ts: unknown): number {
+    if (ts instanceof Object && "toMillis" in (ts as Record<string, unknown>)) {
+      return (ts as { toMillis: () => number }).toMillis();
+    }
+    return new Date(ts as string).getTime();
+  }
+
   for (const u of Object.values(byUser)) {
-    const allEvents = [
+    const allEvents: TaggedEvent[] = [
       ...u.viewOpens.map(e => ({ ...e, _type: "view_open" as const })),
       ...u.genSuccess.map(e => ({ ...e, _type: "generation_success" as const })),
       ...u.genFail.map(e => ({ ...e, _type: "generation_failure" as const })),
     ];
 
-    allEvents.sort((a, b) => {
-      const ta = a.createdAt instanceof Object && "toMillis" in (a.createdAt as Record<string, unknown>)
-        ? (a.createdAt as { toMillis: () => number }).toMillis()
-        : new Date(a.createdAt as string).getTime();
-      const tb = b.createdAt instanceof Object && "toMillis" in (b.createdAt as Record<string, unknown>)
-        ? (b.createdAt as { toMillis: () => number }).toMillis()
-        : new Date(b.createdAt as string).getTime();
-      return ta - tb;
-    });
+    allEvents.sort((a, b) => toMs(a.createdAt) - toMs(b.createdAt));
 
     for (let i = 0; i < allEvents.length; i++) {
       const e = allEvents[i];
@@ -235,13 +236,7 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
       for (let j = i - 1; j >= 0; j--) {
         const prev = allEvents[j];
         if (prev._type === "generation_success" || prev._type === "generation_failure") {
-          const tCurr = e.createdAt instanceof Object && "toMillis" in (e.createdAt as Record<string, unknown>)
-            ? (e.createdAt as { toMillis: () => number }).toMillis()
-            : new Date(e.createdAt as string).getTime();
-          const tPrev = prev.createdAt instanceof Object && "toMillis" in (prev.createdAt as Record<string, unknown>)
-            ? (prev.createdAt as { toMillis: () => number }).toMillis()
-            : new Date(prev.createdAt as string).getTime();
-          if (tCurr - tPrev <= 120000) foundGen = prev._type;
+          if (toMs(e.createdAt) - toMs(prev.createdAt) <= 120000) foundGen = prev._type;
           break;
         }
       }
