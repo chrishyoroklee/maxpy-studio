@@ -60,6 +60,8 @@ export interface ResearchStats {
   codeGlanceRate: number;
   totalGraphOpens: number;
   totalCodeOpens: number;
+  totalGraphCloses: number;
+  totalCodeCloses: number;
 
   // RQ2: Correlation — view engagement × iteration
   followUpRate_graphViewers: number;
@@ -466,6 +468,8 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
     codeGlanceRate: avg(withCode.map(u => u.codeGlanceRate)),
     totalGraphOpens: users.reduce((s, u) => s + u.graphOpens, 0),
     totalCodeOpens: users.reduce((s, u) => s + u.codeOpens, 0),
+    totalGraphCloses: Object.values(byUser).reduce((s, u) => s + u.viewCloses.filter(e => e.view === "patch").length, 0),
+    totalCodeCloses: Object.values(byUser).reduce((s, u) => s + u.viewCloses.filter(e => e.view === "code").length, 0),
 
     followUpRate_graphViewers: avg(withGraph.map(u => u.followUpRate)),
     followUpRate_nonGraphViewers: avg(noGraph.map(u => u.followUpRate)),
