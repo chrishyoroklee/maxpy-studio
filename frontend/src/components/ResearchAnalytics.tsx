@@ -10,32 +10,6 @@ function ms(n: number): string {
   return `${(n / 1000).toFixed(1)}s`;
 }
 
-function CorrelationRow({
-  label,
-  withVal,
-  withoutVal,
-  fmt,
-}: {
-  label: string;
-  withVal: number;
-  withoutVal: number;
-  fmt: (n: number) => string;
-}) {
-  const diff = withVal - withoutVal;
-  const arrow = diff > 0.01 ? "higher" : diff < -0.01 ? "lower" : "same";
-  return (
-    <tr>
-      <td>{label}</td>
-      <td>{fmt(withVal)}</td>
-      <td>{fmt(withoutVal)}</td>
-      <td className={`rs-diff rs-diff-${arrow}`}>
-        {arrow === "higher" && "+"}
-        {fmt(Math.abs(diff))} {arrow}
-      </td>
-    </tr>
-  );
-}
-
 export function ResearchAnalytics() {
   const [stats, setStats] = useState<ResearchStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,94 +84,29 @@ export function ResearchAnalytics() {
         </div>
       </div>
 
-      {/* RQ2 */}
+      {/* Which view first */}
       <div className="rs-section">
         <div className="rs-section-title">
-          RQ2: Does view engagement correlate with iteration and success?
+          View Preference: Which representation do users reach for first?
         </div>
 
-        <div className="rs-table-group">
-          <h4>Follow-up Rate (iteration)</h4>
-          <table className="rs-table">
-            <thead>
-              <tr>
-                <th>View</th>
-                <th>Viewers</th>
-                <th>Non-viewers</th>
-                <th>Difference</th>
-              </tr>
-            </thead>
-            <tbody>
-              <CorrelationRow
-                label="Graph"
-                withVal={stats.followUpRate_graphViewers}
-                withoutVal={stats.followUpRate_nonGraphViewers}
-                fmt={pct}
-              />
-              <CorrelationRow
-                label="Code"
-                withVal={stats.followUpRate_codeViewers}
-                withoutVal={stats.followUpRate_nonCodeViewers}
-                fmt={pct}
-              />
-            </tbody>
-          </table>
+        <div className="admin-grid admin-grid-3">
+          <div className="admin-stat-card">
+            <div className="admin-stat-value">{pct(stats.graphFirstPct)}</div>
+            <div className="admin-stat-label">Graph Opened First</div>
+            <div className="admin-stat-sub">{stats.graphFirstCount} times</div>
+          </div>
+          <div className="admin-stat-card">
+            <div className="admin-stat-value">{pct(1 - stats.graphFirstPct)}</div>
+            <div className="admin-stat-label">Code Opened First</div>
+            <div className="admin-stat-sub">{stats.codeFirstCount} times</div>
+          </div>
         </div>
 
-        <div className="rs-table-group">
-          <h4>Generation Success Rate</h4>
-          <table className="rs-table">
-            <thead>
-              <tr>
-                <th>View</th>
-                <th>Viewers</th>
-                <th>Non-viewers</th>
-                <th>Difference</th>
-              </tr>
-            </thead>
-            <tbody>
-              <CorrelationRow
-                label="Graph"
-                withVal={stats.successRate_graphViewers}
-                withoutVal={stats.successRate_nonGraphViewers}
-                fmt={pct}
-              />
-              <CorrelationRow
-                label="Code"
-                withVal={stats.successRate_codeViewers}
-                withoutVal={stats.successRate_nonCodeViewers}
-                fmt={pct}
-              />
-            </tbody>
-          </table>
-        </div>
-
-        <div className="rs-table-group">
-          <h4>Avg Attempts to Success (retry effort)</h4>
-          <table className="rs-table">
-            <thead>
-              <tr>
-                <th>View</th>
-                <th>Viewers</th>
-                <th>Non-viewers</th>
-                <th>Difference</th>
-              </tr>
-            </thead>
-            <tbody>
-              <CorrelationRow
-                label="Graph"
-                withVal={stats.avgAttempts_graphViewers}
-                withoutVal={stats.avgAttempts_nonGraphViewers}
-                fmt={(n) => n.toFixed(2)}
-              />
-              <CorrelationRow
-                label="Code"
-                withVal={stats.avgAttempts_codeViewers}
-                withoutVal={stats.avgAttempts_nonCodeViewers}
-                fmt={(n) => n.toFixed(2)}
-              />
-            </tbody>
-          </table>
+        <div className="rs-finding" style={{ marginTop: 12 }}>
+          <strong>Finding:</strong> After a successful generation, users open the
+          graph <strong>{pct(stats.graphFirstPct)}</strong> of the time before code —
+          the visual IR is the instinctive first choice for understanding output.
         </div>
       </div>
 
@@ -382,32 +291,6 @@ export function ResearchAnalytics() {
           Code views average {ms(stats.codeDurAfterSuccess)} with{" "}
           {pct(stats.codeGlanceRateAfterSuccess)} glance rate — mostly quick peeks.
           The visual IR is the preferred comprehension tool.
-        </div>
-      </div>
-
-      {/* Which view first */}
-      <div className="rs-section">
-        <div className="rs-section-title">
-          View Preference: Which representation do users reach for first?
-        </div>
-
-        <div className="admin-grid admin-grid-3">
-          <div className="admin-stat-card">
-            <div className="admin-stat-value">{pct(stats.graphFirstPct)}</div>
-            <div className="admin-stat-label">Graph Opened First</div>
-            <div className="admin-stat-sub">{stats.graphFirstCount} times</div>
-          </div>
-          <div className="admin-stat-card">
-            <div className="admin-stat-value">{pct(1 - stats.graphFirstPct)}</div>
-            <div className="admin-stat-label">Code Opened First</div>
-            <div className="admin-stat-sub">{stats.codeFirstCount} times</div>
-          </div>
-        </div>
-
-        <div className="rs-finding" style={{ marginTop: 12 }}>
-          <strong>Finding:</strong> After a successful generation, users open the
-          graph <strong>{pct(stats.graphFirstPct)}</strong> of the time before code —
-          the visual IR is the instinctive first choice for understanding output.
         </div>
       </div>
 
