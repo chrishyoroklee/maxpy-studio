@@ -74,12 +74,12 @@ export function ResearchAnalytics() {
           <div className="admin-stat-card">
             <div className="admin-stat-value">{ms(stats.avgGraphDurationMs)}</div>
             <div className="admin-stat-label">Avg Graph Duration</div>
-            <div className="admin-stat-sub">{pct(stats.graphGlanceRate)} glance rate</div>
+            <div className="admin-stat-sub">{pct(stats.graphGlanceRate)} glance rate (n={stats.totalGraphCloses})</div>
           </div>
           <div className="admin-stat-card">
             <div className="admin-stat-value">{ms(stats.avgCodeDurationMs)}</div>
             <div className="admin-stat-label">Avg Code Duration</div>
-            <div className="admin-stat-sub">{pct(stats.codeGlanceRate)} glance rate</div>
+            <div className="admin-stat-sub">{pct(stats.codeGlanceRate)} glance rate (n={stats.totalCodeCloses})</div>
           </div>
         </div>
       </div>
@@ -105,7 +105,8 @@ export function ResearchAnalytics() {
 
         <div className="rs-finding" style={{ marginTop: 12 }}>
           <strong>Finding:</strong> After a successful generation, users open the
-          graph <strong>{pct(stats.graphFirstPct)}</strong> of the time before code —
+          graph <strong>{pct(stats.graphFirstPct)}</strong> of the time before code
+          ({stats.graphFirstCount} / {stats.graphFirstCount + stats.codeFirstCount} instances) —
           the visual IR is the instinctive first choice for understanding output.
         </div>
       </div>
@@ -147,6 +148,11 @@ export function ResearchAnalytics() {
                 <td className="rs-muted">{stats.temporal.graphNoContext}</td>
                 <td className="rs-muted">—</td>
               </tr>
+              <tr style={{ fontWeight: 600, borderTop: "2px solid var(--border)" }}>
+                <td>Total contextual</td>
+                <td>{stats.temporal.graphAfterSuccess + stats.temporal.graphAfterFailure}</td>
+                <td>100%</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -177,13 +183,19 @@ export function ResearchAnalytics() {
                 <td className="rs-muted">{stats.temporal.codeNoContext}</td>
                 <td className="rs-muted">—</td>
               </tr>
+              <tr style={{ fontWeight: 600, borderTop: "2px solid var(--border)" }}>
+                <td>Total contextual</td>
+                <td>{stats.temporal.codeAfterSuccess + stats.temporal.codeAfterFailure}</td>
+                <td>100%</td>
+              </tr>
             </tbody>
           </table>
         </div>
 
         <div className="rs-finding">
           <strong>Finding:</strong> {pct(stats.temporal.graphAfterSuccessPct)} of
-          graph opens and {pct(stats.temporal.codeAfterSuccessPct)} of code opens
+          contextual graph opens ({stats.temporal.graphAfterSuccess} / {stats.temporal.graphAfterSuccess + stats.temporal.graphAfterFailure})
+          and {pct(stats.temporal.codeAfterSuccessPct)} of contextual code opens ({stats.temporal.codeAfterSuccess} / {stats.temporal.codeAfterSuccess + stats.temporal.codeAfterFailure})
           follow a successful generation — users primarily use these views
           as <strong>comprehension tools</strong> to understand and verify outputs,
           not to debug failures.
@@ -381,8 +393,10 @@ export function ResearchAnalytics() {
 
         <div className="rs-finding" style={{ marginTop: 12 }}>
           <strong>Finding:</strong> Users who viewed the IR after generation N had
-          a <strong>{pct(stats.nextSuccessRateViewers)}</strong> success rate on generation N+1,
-          vs <strong>{pct(stats.nextSuccessRateNonViewers)}</strong> for non-viewers —
+          a <strong>{pct(stats.nextSuccessRateViewers)}</strong> success rate on generation N+1
+          ({stats.viewedThenNextSuccess} / {stats.viewedThenNextSuccess + stats.viewedThenNextFail}),
+          vs <strong>{pct(stats.nextSuccessRateNonViewers)}</strong> for non-viewers
+          ({stats.noViewThenNextSuccess} / {stats.noViewThenNextSuccess + stats.noViewThenNextFail}) —
           a <strong>+{pct(stats.nextSuccessRateViewers - stats.nextSuccessRateNonViewers)}</strong> difference.
           Viewing the IR appears to help users construct more effective prompts.
         </div>
