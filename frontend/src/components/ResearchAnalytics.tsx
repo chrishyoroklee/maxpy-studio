@@ -43,22 +43,22 @@ export function ResearchAnalytics() {
           <div className="admin-stat-card">
             <div className="admin-stat-value">{pct(stats.graphViewerPct)}</div>
             <div className="admin-stat-label">Viewed Graph</div>
-            <div className="admin-stat-sub">{stats.graphViewerCount} users</div>
+            <div className="admin-stat-sub">{stats.graphViewerCount} / {stats.totalUsersWithPrompts} users</div>
           </div>
           <div className="admin-stat-card">
             <div className="admin-stat-value">{pct(stats.codeViewerPct)}</div>
             <div className="admin-stat-label">Viewed Code</div>
-            <div className="admin-stat-sub">{stats.codeViewerCount} users</div>
+            <div className="admin-stat-sub">{stats.codeViewerCount} / {stats.totalUsersWithPrompts} users</div>
           </div>
           <div className="admin-stat-card">
             <div className="admin-stat-value">{pct(stats.bothViewerPct)}</div>
             <div className="admin-stat-label">Viewed Both</div>
-            <div className="admin-stat-sub">{stats.bothViewerCount} users</div>
+            <div className="admin-stat-sub">{stats.bothViewerCount} / {stats.totalUsersWithPrompts} users</div>
           </div>
           <div className="admin-stat-card">
             <div className="admin-stat-value">{pct(stats.neitherViewerPct)}</div>
             <div className="admin-stat-label">Viewed Neither</div>
-            <div className="admin-stat-sub">{stats.neitherViewerCount} users</div>
+            <div className="admin-stat-sub">{stats.neitherViewerCount} / {stats.totalUsersWithPrompts} users</div>
           </div>
         </div>
 
@@ -94,12 +94,12 @@ export function ResearchAnalytics() {
           <div className="admin-stat-card">
             <div className="admin-stat-value">{pct(stats.graphFirstPct)}</div>
             <div className="admin-stat-label">Graph Opened First</div>
-            <div className="admin-stat-sub">{stats.graphFirstCount} times</div>
+            <div className="admin-stat-sub">{stats.graphFirstCount} / {stats.graphFirstCount + stats.codeFirstCount} times</div>
           </div>
           <div className="admin-stat-card">
             <div className="admin-stat-value">{pct(1 - stats.graphFirstPct)}</div>
             <div className="admin-stat-label">Code Opened First</div>
-            <div className="admin-stat-sub">{stats.codeFirstCount} times</div>
+            <div className="admin-stat-sub">{stats.codeFirstCount} / {stats.graphFirstCount + stats.codeFirstCount} times</div>
           </div>
         </div>
 
@@ -258,13 +258,13 @@ export function ResearchAnalytics() {
                 <td>After success</td>
                 <td>{ms(stats.graphDurAfterSuccess)}</td>
                 <td>{pct(stats.graphGlanceRateAfterSuccess)}</td>
-                <td>{stats.graphDurAfterSuccessN}</td>
+                <td>{stats.graphDurAfterSuccessN} / {stats.totalGraphCloses}</td>
               </tr>
               <tr>
                 <td>After failure</td>
                 <td>{stats.graphDurAfterFailureN > 0 ? ms(stats.graphDurAfterFailure) : "—"}</td>
                 <td>{stats.graphDurAfterFailureN > 0 ? pct(stats.graphGlanceRateAfterFailure) : "—"}</td>
-                <td>{stats.graphDurAfterFailureN}</td>
+                <td>{stats.graphDurAfterFailureN} / {stats.totalGraphCloses}</td>
               </tr>
             </tbody>
           </table>
@@ -286,13 +286,13 @@ export function ResearchAnalytics() {
                 <td>After success</td>
                 <td>{ms(stats.codeDurAfterSuccess)}</td>
                 <td>{pct(stats.codeGlanceRateAfterSuccess)}</td>
-                <td>{stats.codeDurAfterSuccessN}</td>
+                <td>{stats.codeDurAfterSuccessN} / {stats.totalCodeCloses}</td>
               </tr>
               <tr>
                 <td>After failure</td>
                 <td>{stats.codeDurAfterFailureN > 0 ? ms(stats.codeDurAfterFailure) : "—"}</td>
                 <td>{stats.codeDurAfterFailureN > 0 ? pct(stats.codeGlanceRateAfterFailure) : "—"}</td>
-                <td>{stats.codeDurAfterFailureN}</td>
+                <td>{stats.codeDurAfterFailureN} / {stats.totalCodeCloses}</td>
               </tr>
             </tbody>
           </table>
@@ -300,9 +300,9 @@ export function ResearchAnalytics() {
 
         <div className="rs-finding">
           <strong>Finding:</strong> Graph views average {ms(stats.graphDurAfterSuccess)} with{" "}
-          {pct(stats.graphGlanceRateAfterSuccess)} glance rate — users study the graph.
+          {pct(stats.graphGlanceRateAfterSuccess)} glance rate (n={stats.graphDurAfterSuccessN}) — users study the graph.
           Code views average {ms(stats.codeDurAfterSuccess)} with{" "}
-          {pct(stats.codeGlanceRateAfterSuccess)} glance rate — mostly quick peeks.
+          {pct(stats.codeGlanceRateAfterSuccess)} glance rate (n={stats.codeDurAfterSuccessN}) — mostly quick peeks.
           The visual IR is the preferred comprehension tool.
         </div>
       </div>
