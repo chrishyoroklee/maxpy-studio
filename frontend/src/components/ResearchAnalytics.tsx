@@ -111,7 +111,7 @@ export function ResearchAnalytics() {
         </div>
       </div>
 
-      {/* Temporal Analysis */}
+      {/* Temporal Analysis — commented out for now
       <div className="rs-section">
         <div className="rs-section-title">
           Temporal Analysis: When do users open views?
@@ -201,6 +201,7 @@ export function ResearchAnalytics() {
           not to debug failures.
         </div>
       </div>
+      */}
 
       {/* Evidence: NOT used for debugging */}
       <div className="rs-section">
