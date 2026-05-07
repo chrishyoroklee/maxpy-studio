@@ -131,6 +131,19 @@ export interface ResearchStats {
   nextSuccessRateViewers: number;
   nextSuccessRateNonViewers: number;
 
+  // A/B test × view preference
+  abTotalAssigned: number;
+  abGraphFirstVariant: number;
+  abCodeFirstVariant: number;
+  abPreABUsers: number;
+  abUsersWithViews: number;
+  abGFLayoutUsers: number;
+  abCFLayoutUsers: number;
+  abGFLayoutGraphFirst: number;
+  abGFLayoutCodeFirst: number;
+  abCFLayoutGraphFirst: number;
+  abCFLayoutCodeFirst: number;
+
   // Per-user table
   users: UserViewStats[];
 }
@@ -140,7 +153,7 @@ function avg(arr: number[]): number {
 }
 
 export async function fetchResearchStats(): Promise<ResearchStats> {
-  const [usersSnap, viewOpenSnap, viewCloseSnap, promptSnap, genSuccessSnap, genFailSnap, downloadSnap] =
+  const [usersSnap, viewOpenSnap, viewCloseSnap, promptSnap, genSuccessSnap, genFailSnap, downloadSnap, expSnap] =
     await Promise.all([
       getDocs(collection(db, "users")),
       getDocs(query(collectionGroup(db, "events"), where("event", "==", "view_open"))),
@@ -149,6 +162,7 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
       getDocs(query(collectionGroup(db, "events"), where("event", "==", "generation_success"))),
       getDocs(query(collectionGroup(db, "events"), where("event", "==", "generation_failure"))),
       getDocs(query(collectionGroup(db, "events"), where("event", "==", "download"))),
+      getDocs(query(collectionGroup(db, "events"), where("event", "==", "experiment_assignment"))),
     ]);
 
   // Group events by user
@@ -161,6 +175,7 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
     genSuccess: EventData[];
     genFail: EventData[];
     downloads: EventData[];
+    variant: string | null;
   }> = {};
 
   const emailMap: Record<string, string> = {};
@@ -179,7 +194,7 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
     if (!byUser[uid]) {
       byUser[uid] = {
         email: emailMap[uid] || "anonymous",
-        viewOpens: [], viewCloses: [], prompts: [], genSuccess: [], genFail: [], downloads: [],
+        viewOpens: [], viewCloses: [], prompts: [], genSuccess: [], genFail: [], downloads: [], variant: null,
       };
     }
     return byUser[uid];
@@ -208,6 +223,13 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
   for (const doc of downloadSnap.docs) {
     const uid = getUid(doc);
     if (uid) ensure(uid).downloads.push(doc.data());
+  }
+  for (const doc of expSnap.docs) {
+    const uid = getUid(doc);
+    const d = doc.data();
+    if (uid && d.experiment === "panel_order" && !ensure(uid).variant) {
+      ensure(uid).variant = d.variant as string;
+    }
   }
 
   // Compute per-user stats
@@ -440,6 +462,56 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
   const totalViewedDl = viewThenDownload + viewThenNoDownload;
   const totalNoViewDl = noViewThenDownload + noViewThenNoDownload;
 
+  // A/B test × view preference
+  let abGraphFirstVariant = 0, abCodeFirstVariant = 0, abPreABUsers = 0;
+  let abGFLayoutGraphFirst = 0, abGFLayoutCodeFirst = 0;
+  let abCFLayoutGraphFirst = 0, abCFLayoutCodeFirst = 0;
+  const abUsersWithViewsSet = new Set<string>();
+
+  for (const [uid, u] of Object.entries(byUser)) {
+    if (u.prompts.length === 0) continue;
+    if (!u.variant) { abPreABUsers++; continue; }
+    if (u.variant === "graph-first") abGraphFirstVariant++;
+    else abCodeFirstVariant++;
+
+    const allAB: FullTaggedEvent[] = [
+      ...u.viewOpens.map(e => ({ ...e, _type: "view_open" })),
+      ...u.genSuccess.map(e => ({ ...e, _type: "generation_success" })),
+      ...u.genFail.map(e => ({ ...e, _type: "generation_failure" })),
+    ];
+    allAB.sort((a, b) => toMs(a.createdAt) - toMs(b.createdAt));
+    const abGenIdx: number[] = [];
+    for (let i = 0; i < allAB.length; i++) {
+      if (allAB[i]._type === "generation_success" || allAB[i]._type === "generation_failure") abGenIdx.push(i);
+    }
+    for (let gi = 0; gi < abGenIdx.length; gi++) {
+      const idx = abGenIdx[gi];
+      if (allAB[idx]._type !== "generation_success") continue;
+      const genTime = toMs(allAB[idx].createdAt);
+      const nextIdx = gi < abGenIdx.length - 1 ? abGenIdx[gi + 1] : allAB.length;
+      let fgT: number | null = null, fcT: number | null = null;
+      for (let j = idx + 1; j < nextIdx && j < allAB.length; j++) {
+        const e = allAB[j];
+        if (toMs(e.createdAt) - genTime > 300000) break;
+        if (e._type === "view_open") {
+          if (e.view === "patch" && fgT === null) fgT = toMs(e.createdAt);
+          if (e.view === "code" && fcT === null) fcT = toMs(e.createdAt);
+        }
+      }
+      let clicked: "graph" | "code" | null = null;
+      if (fgT !== null && fcT !== null) clicked = fgT <= fcT ? "graph" : "code";
+      else if (fgT !== null) clicked = "graph";
+      else if (fcT !== null) clicked = "code";
+      if (!clicked) continue;
+      abUsersWithViewsSet.add(uid);
+      if (u.variant === "graph-first") {
+        if (clicked === "graph") abGFLayoutGraphFirst++; else abGFLayoutCodeFirst++;
+      } else {
+        if (clicked === "graph") abCFLayoutGraphFirst++; else abCFLayoutCodeFirst++;
+      }
+    }
+  }
+
   users.sort((a, b) => b.promptCount - a.promptCount);
 
   const withGraph = users.filter(u => u.viewedGraph);
@@ -543,6 +615,18 @@ export async function fetchResearchStats(): Promise<ResearchStats> {
     noViewThenNextFail,
     nextSuccessRateViewers: totalViewedLagged > 0 ? viewedThenNextSuccess / totalViewedLagged : 0,
     nextSuccessRateNonViewers: totalNoViewLagged > 0 ? noViewThenNextSuccess / totalNoViewLagged : 0,
+
+    abTotalAssigned: abGraphFirstVariant + abCodeFirstVariant,
+    abGraphFirstVariant,
+    abCodeFirstVariant,
+    abPreABUsers,
+    abUsersWithViews: abUsersWithViewsSet.size,
+    abGFLayoutUsers: users.filter(u => byUser[u.uid]?.variant === "graph-first" && (u.graphOpens > 0 || u.codeOpens > 0)).length,
+    abCFLayoutUsers: users.filter(u => byUser[u.uid]?.variant === "code-first" && (u.graphOpens > 0 || u.codeOpens > 0)).length,
+    abGFLayoutGraphFirst,
+    abGFLayoutCodeFirst,
+    abCFLayoutGraphFirst,
+    abCFLayoutCodeFirst,
 
     users,
   };

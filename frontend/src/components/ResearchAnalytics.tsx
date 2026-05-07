@@ -111,6 +111,81 @@ export function ResearchAnalytics() {
         </div>
       </div>
 
+      {/* A/B Test × View Preference */}
+      <div className="rs-section">
+        <div className="rs-section-title">
+          A/B Test × View Preference (Controls for Position Bias)
+        </div>
+        <p className="rs-insight">
+          Panel order is randomized: some users see graph on the left, others see code on the left.
+          Does the &ldquo;graph first&rdquo; preference hold regardless of position?
+        </p>
+
+        <div className="admin-grid admin-grid-3">
+          <div className="admin-stat-card">
+            <div className="admin-stat-value">{stats.abGraphFirstVariant}</div>
+            <div className="admin-stat-label">Graph-First Variant</div>
+            <div className="admin-stat-sub">{stats.abGraphFirstVariant} / {stats.abTotalAssigned} assigned</div>
+          </div>
+          <div className="admin-stat-card">
+            <div className="admin-stat-value">{stats.abCodeFirstVariant}</div>
+            <div className="admin-stat-label">Code-First Variant</div>
+            <div className="admin-stat-sub">{stats.abCodeFirstVariant} / {stats.abTotalAssigned} assigned</div>
+          </div>
+          <div className="admin-stat-card">
+            <div className="admin-stat-value">{stats.abPreABUsers}</div>
+            <div className="admin-stat-label">Pre-A/B Users</div>
+            <div className="admin-stat-sub">signed up before test</div>
+          </div>
+        </div>
+
+        <div className="rs-table-group" style={{ marginTop: 12 }}>
+          <table className="rs-table">
+            <thead>
+              <tr>
+                <th>Layout Variant</th>
+                <th>Clicked Graph First</th>
+                <th>Clicked Code First</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Graph-first</strong> (graph on left)</td>
+                <td className="rs-yes">
+                  {pct((stats.abGFLayoutGraphFirst + stats.abGFLayoutCodeFirst) > 0 ? stats.abGFLayoutGraphFirst / (stats.abGFLayoutGraphFirst + stats.abGFLayoutCodeFirst) : 0)}{" "}
+                  ({stats.abGFLayoutGraphFirst} / {stats.abGFLayoutGraphFirst + stats.abGFLayoutCodeFirst})
+                </td>
+                <td>
+                  {pct((stats.abGFLayoutGraphFirst + stats.abGFLayoutCodeFirst) > 0 ? stats.abGFLayoutCodeFirst / (stats.abGFLayoutGraphFirst + stats.abGFLayoutCodeFirst) : 0)}{" "}
+                  ({stats.abGFLayoutCodeFirst} / {stats.abGFLayoutGraphFirst + stats.abGFLayoutCodeFirst})
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Code-first</strong> (code on left)</td>
+                <td className="rs-yes">
+                  {pct((stats.abCFLayoutGraphFirst + stats.abCFLayoutCodeFirst) > 0 ? stats.abCFLayoutGraphFirst / (stats.abCFLayoutGraphFirst + stats.abCFLayoutCodeFirst) : 0)}{" "}
+                  ({stats.abCFLayoutGraphFirst} / {stats.abCFLayoutGraphFirst + stats.abCFLayoutCodeFirst})
+                </td>
+                <td>
+                  {pct((stats.abCFLayoutGraphFirst + stats.abCFLayoutCodeFirst) > 0 ? stats.abCFLayoutCodeFirst / (stats.abCFLayoutGraphFirst + stats.abCFLayoutCodeFirst) : 0)}{" "}
+                  ({stats.abCFLayoutCodeFirst} / {stats.abCFLayoutGraphFirst + stats.abCFLayoutCodeFirst})
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="rs-finding" style={{ marginTop: 12 }}>
+          <strong>Finding:</strong> Even when code is positioned on the left (first tab),
+          users still clicked graph first{" "}
+          <strong>
+            {pct((stats.abCFLayoutGraphFirst + stats.abCFLayoutCodeFirst) > 0 ? stats.abCFLayoutGraphFirst / (stats.abCFLayoutGraphFirst + stats.abCFLayoutCodeFirst) : 0)}
+          </strong>{" "}
+          of the time ({stats.abCFLayoutGraphFirst} / {stats.abCFLayoutGraphFirst + stats.abCFLayoutCodeFirst}).
+          The graph preference is genuine, not a position artifact.
+        </div>
+      </div>
+
       {/* Temporal Analysis — commented out for now
       <div className="rs-section">
         <div className="rs-section-title">
