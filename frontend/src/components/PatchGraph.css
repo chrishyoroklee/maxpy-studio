@@ -175,6 +175,64 @@
   }
 }
 
+/* ==================== Theme Toggle Button ==================== */
+
+.patch-graph__theme-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.patch-graph__theme-toggle:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+/* ==================== Light Theme (for paper figures) ==================== */
+
+.patch-graph--light {
+  --bg-base: #ffffff;
+  --bg-surface: #f5f5f8;
+  --bg-elevated: #eeeef2;
+  --text-primary: #1a1a2e;
+  --text-secondary: #5a5a78;
+  --text-muted: #8888a0;
+  --signal: #a08520;
+  --border-default: rgba(0, 0, 0, 0.12);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --accent: #6e61c2;
+  --accent-muted: rgba(110, 97, 194, 0.15);
+}
+
+.patch-graph--light .react-flow__background {
+  background: #ffffff;
+}
+
+.patch-graph--light .max-object-node__body--signal {
+  background: rgba(160, 133, 32, 0.08);
+}
+
+.patch-graph--light .react-flow__minimap {
+  background: #f0f0f4;
+}
+
+.patch-graph--light .react-flow__controls {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .patch-graph--animate-edges .react-flow__edge.signal-edge .react-flow__edge-path {
     animation: none;

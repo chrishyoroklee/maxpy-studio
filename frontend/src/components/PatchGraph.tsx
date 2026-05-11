@@ -214,12 +214,21 @@ export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInter
     onUserInteract();
   }, [onUserInteract]);
 
-  const rootClass = ["patch-graph", animatedEdges ? "patch-graph--animate-edges" : "", className || ""]
+  const [isLight, setIsLight] = useState(false);
+
+  const rootClass = ["patch-graph", animatedEdges ? "patch-graph--animate-edges" : "", isLight ? "patch-graph--light" : "", className || ""]
     .filter(Boolean)
     .join(" ");
 
   return (
     <div className={rootClass} ref={containerRef}>
+      <button
+        onClick={() => setIsLight((v) => !v)}
+        className="patch-graph__theme-toggle"
+        title={isLight ? "Switch to dark" : "Switch to light"}
+      >
+        {isLight ? "☾" : "☀"}
+      </button>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -265,16 +274,16 @@ export function PatchGraph({ nodes, edges, animatedEdges, className, onUserInter
           }
         }}
       >
-        <Background gap={20} size={1} color="rgba(255,255,255,0.03)" />
+        <Background gap={20} size={1} color={isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.03)"} />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={(node) => {
             const d = node.data as unknown as PatchNodeData;
             if (d.isSignal) return "var(--signal, #c8a83e)";
-            if (d.maxclass === "comment") return "rgba(255,255,255,0.15)";
+            if (d.maxclass === "comment") return isLight ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.15)";
             return "var(--text-secondary)";
           }}
-          maskColor="rgba(8, 8, 13, 0.7)"
+          maskColor={isLight ? "rgba(255, 255, 255, 0.7)" : "rgba(8, 8, 13, 0.7)"}
           pannable
           zoomable
         />
